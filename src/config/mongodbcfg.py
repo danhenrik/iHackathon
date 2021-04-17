@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from envcfg import MONGO_DB_URL
+from config.envcfg import MONGO_DB_URL
 
 cluster = MongoClient(MONGO_DB_URL)
 db = cluster.iSpirito

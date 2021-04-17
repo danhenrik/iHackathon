@@ -1,5 +1,6 @@
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 from config.envcfg import TOKEN
+from config.mongodbcfg import reminders
 import json
 
 def Lembrete(update, context):
@@ -49,6 +50,16 @@ def teste(update, context):
 
 def copia(update, context):
     response_message = update.message.text
+    print("update> ", update, "\n\n")
+    print(update.message.from_user.id)
+    print(update.message.text)
+
+    newReminder = {
+        "author_id": update.message.from_user.id ,
+        "author_name": update.message.from_user.first_name ,
+        "text": update.message.text, 
+    }
+    reminders.insert_one(newReminder)
 
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=response_message+"!"
