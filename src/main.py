@@ -3,6 +3,8 @@ from config.envcfg import TOKEN
 from config.mongodbcfg import reminders
 import json
 
+FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION = map(chr, range(6))
+
 def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
 
@@ -65,12 +67,65 @@ def copia(update, context):
         chat_id=update.effective_chat.id, text=response_message+"!"
     )
 
+#Funções teste conversa
+
+def start(update, context):
+  buttons = [
+    InlineKeyboardButton(text='Diretorias', callback_data=str(DIRETORIAS)),
+    InlineKeyboardButton(text='Tecnologias', callback_data=str(TECNOLOGIAS))
+  ]
+  keyboard = InlineKeyboardMarkup(buttons)
+  update.message.reply_text(reply_markup = keyboard)
+
+def selectTheme(update, context):
+  buttons = [
+    InlineKeyboardButton(text='Diretorias', callback_data=str(DIRETORIAS)),
+    InlineKeyboardButton(text='Tecnologias', callback_data=str(TECNOLOGIAS))
+  ]
+  keyboard = InlineKeyboardMarkup(buttons)
+  update.message.reply_text(reply_markup = keyboard)
+
+def selectQuestion(update, context):
+  update.message.reply_text(text="Perguntas:")
+
+def showAnswer(update, context):
+  update.message.reply_text(text="Resposta")
+
+
+
 def main():
     updater = Updater(token=TOKEN)
 
     dispatcher = updater.dispatcher
 
+    faq_conv = ConversationHandler(
+      entry_points=[CallbackQueryHandler(selectTheme, pattern=f'^{FAQ}$')],
+      states={
+        SELECTING_THEME: [CallbackQueryHandler(selectQuestion, pattern=f'^{DIRETORIAS}$|^{TECNOLOGIAS}$')],
+        SELECTING_QUESTION: [MessageHandler(Filters.regex('^[0-9]+$') ^ Filters.regex('Outra'), showAnswer)]
+      },
+      #fallbacks=[CommandHandler('stop', stopNested)]
+      fallbacks=[]
+    )
+
+    selectionHandlers = [
+      faq_conv,
+      """ sugestao_conv,
+      lembrete_conv,
+      justificativa_conv,
+      segfault_conv """
+    ]
+
+    starting_conv = ConversationHandler(
+      entry_points=[CommandHandler('start', start)],
+      states={
+        SELECTING_ACTION: selectionHandlers
+      },
+      fallbacks=[]
+    )
+
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
+    dispatcher.add_handler(starting_conv)
     dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
     dispatcher.add_handler(CommandHandler("sugestao", Sugestao))
     dispatcher.add_handler(CommandHandler("181", DenunciaAnonima))
