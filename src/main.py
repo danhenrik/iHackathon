@@ -1,7 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from config.env import TOKEN
-from config.db import reminders
+from config.db import reminders,birthdays
 import json
 
 FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION, STOPPING, END = map(chr, range(8))
@@ -50,7 +50,18 @@ def teste(update, context):
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=response_message
     )
-
+def setBirthday(update, context):
+  userID = update.message.from_user.id
+  checkdb = birthdays.find_one({"userID":userID})
+  print(checkdb)
+  """
+  newBirthday = {
+        "author_id": update.message.from_user.id ,
+        "author_name": update.message.from_user.first_name ,
+        "text": update.message.text, 
+    }
+    birthdays.insert_one(newReminder)
+    """
 def copia(update, context):
     response_message = update.message.text
     print("update> ", update, "\n\n")
@@ -62,7 +73,7 @@ def copia(update, context):
         "author_name": update.message.from_user.first_name ,
         "text": update.message.text, 
     }
-    reminders.insert_one(newReminder)
+    birthdays.insert_one(newReminder)
 
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=response_message+"!"
@@ -161,6 +172,7 @@ def main():
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
     dispatcher.add_handler(starting_conv)
+    dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
     dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
     dispatcher.add_handler(CommandHandler("sugestao", Sugestao))
     dispatcher.add_handler(CommandHandler("181", DenunciaAnonima))
