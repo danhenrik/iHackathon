@@ -1,15 +1,20 @@
-from typing import ContextManager
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
-from env import TOKEN
-from db import reminders, birthdays
-from scheduleCheckBD import checkBirthday
-from scheduleCheckRM import checkReminder
-import schedule
-import time
+from config.env import TOKEN
+from config.db import reminders, birthdays, faq
+import json
 
-FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION, STOPPING, END = map(
-    chr, range(8))
+(
+    FAQ,
+    DIRETORIAS,
+    TECNOLOGIAS,
+    SELECTING_ACTION,
+    SELECTING_THEME,
+    SELECTING_QUESTION,
+    STOPPING,
+    END,
+    TYPING_TARGET,
+    TYPING_SUGGESTION) = map(chr, range(10))
 
 
 def say(update, context, message):
@@ -18,14 +23,14 @@ def say(update, context, message):
     )
 
 
-def lembrete(update, context):
+def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
 
     # TODO: Salvar o lembrete no banco
     say(update, context, response_message)
 
 
-def sugestao(update, context):
+def Sugestao(update, context):
     response_message = "Qualquer coisa"
 
     # TODO: Pergunta qual a sugestão, depois pra quem e por fim manda a sugestão
@@ -37,11 +42,11 @@ def unknown(update, context):
     say(update, context, response_message)
 
 
-def denunciaAnonima(update, context):
+def DenunciaAnonima(update, context):
     response_message = "Manda a braba"
-    say(update, context, response_message)
 
     # TODO: Pega a proxima mensagem que te mandarem e manda ela pro RH
+    say(update, context, response_message)
 
 
 def teste(update, context):
@@ -106,7 +111,7 @@ def copia(update, context):
     # birthdays.insert_one(newReminder)
 
     context.bot.send_message(
-        chat_id=update.effective_chat.id, text="Para de me usar, ainda estou em desenvolvimento"
+        chat_id=update.effective_chat.id, text=response_message+"!"
     )
 
 # Funções teste conversa
@@ -118,7 +123,9 @@ def start(update, context):
         ['Xapralá']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    text = ("Olá! Com o que posso ajudar?")
+    text = ('Olá! Eu sou o iSpirito.\n'
+            'Sou seu assistente pessoal da iJunior!\n'
+            'Com o que posso ajudar?')
     update.message.reply_text(text=text, reply_markup=markup)
 
     return SELECTING_ACTION
@@ -126,34 +133,85 @@ def start(update, context):
 
 def selectTheme(update, context):
     text = "Sobre qual assunto é sua dúvida?"
+
     reply_keyboard = [
-        ['Diretorias', 'Tecnologias', 'Processo Seletivo'],
-        ['Xapralá']
+        ['Diretorias', 'Tecnologias', 'Outros'],
+        ['Cancelar']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
 
+    return SELECTING_THEME
+
 
 def selectQuestion(update, context):
-    reply_keyboard = [
-        ['Pergunta 1', 'Pergunta 2'],
-        ['Pergunta 3', 'Outra']
-    ]
+    tema = update.message.text
+
+    if tema == 'Cancelar':
+        start(update, context)
+        return None
+
+    reply_keyboard = []
+
+    for pergunta in faq.find({"tema": tema}):
+        reply_keyboard.append([pergunta['enunciado']])
+
+    reply_keyboard.append(['Outra', 'Cancelar'])
+
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     text = "Perguntas comuns desse tema:"
     update.message.reply_text(text=text, reply_markup=markup)
 
+    return SELECTING_QUESTION
+
 
 def showAnswer(update, context):
-    update.message.reply_text(text="Resposta")
+    enunciado = update.message.text
+    if enunciado == 'Cancelar':
+        start(update, context)
+        return None
+
+    pergunta = faq.find_one({"enunciado": enunciado})
+
+    text = pergunta['resposta']
+    update.message.reply_text(text=text)
 
 
-def stopNested(update, context):
-    return STOPPING
+def getTarget(update, context):
+    text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
+            'Qual será o alvo da sua sugestão?')
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
+
+    return TYPING_TARGET
 
 
-def stop(update, context):
-    return END
+def getSuggestion(update, context):
+    alvo = update.message.text
+    if alvo == 'Cancelar':
+        start(update, context)
+        return None
+
+    text = ('Perfeito!\n'
+            'E qual será a sua sugestão?')
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
+
+    return TYPING_SUGGESTION
+
+
+def registerSuggestion(update, context):
+
+    # TODO Enviar email
+
+    update.message.reply_text(
+        text='Sua sugestão será enviada diretamente para nosso email!')
+    update.message.reply_text(text='Muito obrigado!')
+    start(update, context)
+
+    return None
 
 
 def main():
@@ -167,23 +225,26 @@ def main():
     faq_conv = ConversationHandler(
         entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
         states={
-            SELECTING_THEME: [MessageHandler(Filters.text, selectQuestion)],
+            SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
             SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
         },
-        fallbacks=[CommandHandler('stop', stopNested)]
+        fallbacks=[]
     )
 
-    """ sugestao_conv = ConversationHandler(
-      entry_points=[CallbackQueryHandler(getAlvo, patten=f'^{SUGESTAO}$')],
-      state={
-        TYPING: [CallbackQueryHandler()]
-      }
-    ) """
+    sugestao_conv = ConversationHandler(
+        entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
+        states={
+            TYPING_TARGET: [MessageHandler(Filters.text, getSuggestion)],
+            TYPING_SUGGESTION: [MessageHandler(
+                Filters.text, registerSuggestion)]
+        },
+        fallbacks=[]
+    )
 
     selectionHandlers = [
         faq_conv,
-        """ sugestao_conv,
-      lembrete_conv,
+        sugestao_conv,
+        """ lembrete_conv,
       justificativa_conv,
       segfault_conv """
     ]
@@ -194,28 +255,26 @@ def main():
             SELECTING_ACTION: selectionHandlers,
             STOPPING: [CommandHandler('start', start)]
         },
-        fallbacks=[CommandHandler('stop', stop)]
+        fallbacks=[]
     )
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
     dispatcher.add_handler(starting_conv)
     dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
-    dispatcher.add_handler(CommandHandler("lembrete", lembrete))
-    dispatcher.add_handler(CommandHandler("sugestao", sugestao))
-    dispatcher.add_handler(CommandHandler("181", denunciaAnonima))
+    dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
+    dispatcher.add_handler(CommandHandler("sugestao", Sugestao))
+    dispatcher.add_handler(CommandHandler("181", DenunciaAnonima))
     dispatcher.add_handler(CommandHandler("teste", teste))
     # Quando chegar uma menssagem e ela n for um comando da trigger na função segundo parâmetro
     dispatcher.add_handler(MessageHandler(
         Filters.text & (~Filters.command), copia))
     dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
+    updater.start_polling()
+    updater.idle()
     while(True):
         schedule.run_pending()
         time.sleep(1)
-
-    updater.start_polling()
-
-    updater.idle()
 
 
 if __name__ == "__main__":
