@@ -2,6 +2,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from env import TOKEN
 from db import reminders, birthdays, faq
+from mail import send_mail
 import json
 
 (
@@ -204,7 +205,9 @@ def getSuggestion(update, context):
 
 def registerSuggestion(update, context):
 
-    # TODO Enviar email
+    suggestion = update.message.text
+
+    send_mail(suggestion)
 
     update.message.reply_text(
         text='Sua sugestão será enviada diretamente para nosso email!')
