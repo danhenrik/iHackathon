@@ -1,7 +1,6 @@
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
-from config.config import TOKEN
+from config.envcfg import TOKEN
 import json
-
 
 def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
