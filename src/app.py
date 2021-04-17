@@ -226,7 +226,7 @@ def main():
 
     schedule.every(1).day.at("11:30").do(checkBirthday)
     schedule.every(1).minutes.do(checkReminder)
-    schedule.every(10).seconds.do(testeSched)
+    #schedule.every(10).seconds.do(testeSched)
 
     dispatcher = updater.dispatcher
 
