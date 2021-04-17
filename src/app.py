@@ -1,7 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
-from config.env import TOKEN
-from config.db import reminders, birthdays, faq
+from env import TOKEN
+from db import reminders, birthdays, faq
 import json
 
 (
