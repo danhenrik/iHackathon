@@ -1,9 +1,9 @@
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler
-from config.envfg import TOKEN
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
+from config.envcfg import TOKEN
 import json
 
-FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION = map(chr, range(6))
+FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION, STOPPING, END = map(chr, range(8))
 
 def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
@@ -60,26 +60,42 @@ def copia(update, context):
 #Funções teste conversa
 
 def start(update, context):
-  buttons = [
-    InlineKeyboardButton(text='Diretorias', callback_data=str(DIRETORIAS)),
-    InlineKeyboardButton(text='Tecnologias', callback_data=str(TECNOLOGIAS))
+  reply_keyboard = [
+    ['FAQ', 'Sugestão'],
+    ['Xapralá']
   ]
-  keyboard = InlineKeyboardMarkup(buttons)
-  update.message.reply_text(reply_markup = keyboard)
+  markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+  text = ("Olá! Com o que posso ajudar?")
+  update.message.reply_text(text=text, reply_markup=markup)
+
+  return SELECTING_ACTION
 
 def selectTheme(update, context):
-  buttons = [
-    InlineKeyboardButton(text='Diretorias', callback_data=str(DIRETORIAS)),
-    InlineKeyboardButton(text='Tecnologias', callback_data=str(TECNOLOGIAS))
+  text = "Sobre qual assunto é sua dúvida?"
+  reply_keyboard = [
+    ['Diretorias', 'Tecnologias', 'Processo Seletivo'],
+    ['Xapralá']
   ]
-  keyboard = InlineKeyboardMarkup(buttons)
-  update.message.reply_text(reply_markup = keyboard)
+  markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+  update.message.reply_text(text=text, reply_markup = markup)
 
 def selectQuestion(update, context):
-  update.message.reply_text(text="Perguntas:")
+  reply_keyboard = [
+    ['Pergunta 1', 'Pergunta 2'],
+    ['Pergunta 3', 'Outra']
+  ]
+  markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+  text="Perguntas comuns desse tema:"
+  update.message.reply_text(text=text, reply_markup = markup)
 
 def showAnswer(update, context):
   update.message.reply_text(text="Resposta")
+
+def stopNested(update, context):
+  return STOPPING
+
+def stop(update, context):
+  return END
 
 
 
@@ -89,14 +105,20 @@ def main():
     dispatcher = updater.dispatcher
 
     faq_conv = ConversationHandler(
-      entry_points=[CallbackQueryHandler(selectTheme, pattern=f'^{FAQ}$')],
+      entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
       states={
-        SELECTING_THEME: [CallbackQueryHandler(selectQuestion, pattern=f'^{DIRETORIAS}$|^{TECNOLOGIAS}$')],
-        SELECTING_QUESTION: [MessageHandler(Filters.regex('^[0-9]+$') ^ Filters.regex('Outra'), showAnswer)]
+        SELECTING_THEME: [MessageHandler(Filters.text, selectQuestion)],
+        SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
       },
-      #fallbacks=[CommandHandler('stop', stopNested)]
-      fallbacks=[]
+      fallbacks=[CommandHandler('stop', stopNested)]
     )
+
+    """ sugestao_conv = ConversationHandler(
+      entry_points=[CallbackQueryHandler(getAlvo, patten=f'^{SUGESTAO}$')],
+      state={
+        TYPING: [CallbackQueryHandler()]
+      }
+    ) """
 
     selectionHandlers = [
       faq_conv,
@@ -109,9 +131,10 @@ def main():
     starting_conv = ConversationHandler(
       entry_points=[CommandHandler('start', start)],
       states={
-        SELECTING_ACTION: selectionHandlers
+        SELECTING_ACTION: selectionHandlers,
+        STOPPING: [CommandHandler('start', start)]
       },
-      fallbacks=[]
+      fallbacks=[CommandHandler('stop', stop)]
     )
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
