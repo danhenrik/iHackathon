@@ -10,16 +10,14 @@ from mail import send_mail
 import json
 
 (
-    FAQ,
-    DIRETORIAS,
-    TECNOLOGIAS,
     SELECTING_ACTION,
     SELECTING_THEME,
     SELECTING_QUESTION,
     STOPPING,
     END,
     TYPING_TARGET,
-    TYPING_SUGGESTION) = map(chr, range(10))
+    TYPING_SUGGESTION,
+    TYPING_SEGFAULT) = map(chr, range(8))
 
 
 def say(update, context, message):
@@ -123,8 +121,13 @@ def copia(update, context):
 
 
 def start(update, context):
+    if update.message.chat.type != 'private':
+      text='Desculpe, mas só podemos ter uma conversa no privado! ^^'
+      update.message.reply_text(text=text)
+      return None
+
     reply_keyboard = [
-        ['FAQ', 'Sugestão'],
+        ['FAQ', 'Sugestão', 'Segfault'],
         ['Xapralá']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
@@ -207,19 +210,32 @@ def getSuggestion(update, context):
     return TYPING_SUGGESTION
 
 
-def registerSuggestion(update, context):
+def sendSuggestion(update, context):
 
     suggestion = update.message.text
 
-    send_mail(suggestion)
+    send_mail('Sugestão', suggestion)
 
     update.message.reply_text(
         text='Sua sugestão será enviada diretamente para nosso email!')
     update.message.reply_text(text='Muito obrigado!')
     start(update, context)
 
-    return None
+def getSegfault(update, context):
+    text=('Que pena que você tenha uma reclamação\n'
+      'Mas que bom que você está nos contando!\n'
+      'Qual é o problema? Não se preocupe, essa denúncia é anônima')
+    update.message.reply_text(text = text)
 
+    return TYPING_SEGFAULT
+
+def sendSegfault(update, context):
+    segfault = update.message.text
+    send_mail('Segfault', segfault)
+    text=('Muito obrigado pela sua submissão!\n'
+      'Sua reclamação já foi enviada para o nosso email!')
+
+    update.message.reply_text(text=text)
 
 def main():
     updater = Updater(token=TOKEN)
@@ -244,17 +260,23 @@ def main():
         states={
             TYPING_TARGET: [MessageHandler(Filters.text, getSuggestion)],
             TYPING_SUGGESTION: [MessageHandler(
-                Filters.text, registerSuggestion)]
+                Filters.text, sendSuggestion)]
         },
         fallbacks=[]
     )
 
+    segfault_conv = ConversationHandler(
+      entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
+      states={
+        TYPING_SEGFAULT: [MessageHandler(Filters.text, sendSegfault)]
+      },
+      fallbacks=[]
+    )
+
     selectionHandlers = [
-        faq_conv,
-        sugestao_conv,
-        """ lembrete_conv,
-      justificativa_conv,
-      segfault_conv """
+      faq_conv,
+      sugestao_conv,
+      segfault_conv
     ]
 
     starting_conv = ConversationHandler(

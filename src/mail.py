@@ -3,7 +3,7 @@ from email.mime.text import MIMEText
 import smtplib
 from env import SMTP_EMAIL, SMTP_PASSWORD
  
-def send_mail(message):
+def send_mail(subject, message):
 
   msg = MIMEMultipart()
   
@@ -11,7 +11,7 @@ def send_mail(message):
   password = SMTP_PASSWORD
   msg['From'] = SMTP_EMAIL
   msg['To'] = SMTP_EMAIL
-  msg['Subject'] = "Sugestão"
+  msg['Subject'] = subject
   
   # add in the message body
   msg.attach(MIMEText(message, 'plain'))
