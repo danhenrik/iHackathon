@@ -16,10 +16,6 @@ def checkBirthday():
     return aniversariantes
 
 
-checkBirthday()
-# print(checkBirthday())
-
-
 def checkReminder():
     print("Rodou uma vez")
     return "blablabla"
