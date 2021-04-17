@@ -74,7 +74,7 @@ def validateDate(context):
         return False
 
 
-def checkPrivate(update, context):
+def checkPrivate(update):
     return update.message.chat.type == "private"
 
 
@@ -82,7 +82,7 @@ def setBirthday(update, context):
     userID = update.message.from_user.id
     checkdb = birthdays.count_documents({"userID": userID})
     print(update)
-    if(checkPrivate(update, context)):
+    if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
         if(validateDate(context)):
@@ -148,7 +148,7 @@ def newMonth(month):
 
 
 def getBirthdays(update, context):
-    if(checkPrivate(update, context)):
+    if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
         response_message = "Aniversariantes:\n"
@@ -277,7 +277,7 @@ def getSuggestion(update, context):
 
 
 def getHelp(update, context):
-    if(update.message.chat.type == "group"):
+    if(checkPrivate(update)):
         response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
     else:
         response_message = "Commands:\n\n/birthdaylist"
