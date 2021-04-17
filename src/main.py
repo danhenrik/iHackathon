@@ -1,6 +1,6 @@
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
-from config.envcfg import TOKEN
-from config.mongodbcfg import reminders
+from config.env import TOKEN
+from config.db import reminders
 import json
 
 FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION = map(chr, range(6))
