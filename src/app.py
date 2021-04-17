@@ -1,6 +1,10 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from env import TOKEN
+from scheduledEvents import checkBirthday, checkReminder
+import time
+
+import schedule
 from db import reminders, birthdays, faq
 import json
 
@@ -217,8 +221,9 @@ def registerSuggestion(update, context):
 def main():
     updater = Updater(token=TOKEN)
 
-    schedule.every(1).day.at("11:30").do(checkBirthday())
-    schedule.every(1).minutes.do(checkReminder())
+    schedule.every(1).day.at("11:30").do(checkBirthday)
+    schedule.every(1).minutes.do(checkReminder)
+    schedule.every(10).seconds.do(testeSched)
 
     dispatcher = updater.dispatcher
 
@@ -272,9 +277,6 @@ def main():
 
     updater.start_polling()
     updater.idle()
-    while(True):
-        schedule.run_pending()
-        time.sleep(1)
 
 
 if __name__ == "__main__":
