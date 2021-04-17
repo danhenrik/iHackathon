@@ -84,23 +84,33 @@ def start(update, context):
 def selectTheme(update, context):
   text = "Sobre qual assunto é sua dúvida?"
   reply_keyboard = [
-    ['Diretorias', 'Tecnologias', 'Processo Seletivo'],
-    ['Xapralá']
+    ['Diretorias', 'Tecnologias', 'Outros'],
+    ['Cancelar']
   ]
   markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
   update.message.reply_text(text=text, reply_markup = markup)
 
+  return SELECTING_THEME
+
 def selectQuestion(update, context):
   reply_keyboard = [
     ['Pergunta 1', 'Pergunta 2'],
-    ['Pergunta 3', 'Outra']
+    ['Pergunta 3', 'Outra'],
+    ['Cancelar']
   ]
   markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
   text="Perguntas comuns desse tema:"
   update.message.reply_text(text=text, reply_markup = markup)
 
+  return SELECTING_QUESTION
+
 def showAnswer(update, context):
-  update.message.reply_text(text="Resposta")
+  pergunta = update.message.text
+  if pergunta == 'Cancelar':
+    return STOPPING
+  
+  text = f'Resposta da pergunta: {pergunta}'
+  update.message.reply_text(text=text)
 
 def stopNested(update, context):
   return STOPPING
@@ -118,10 +128,11 @@ def main():
     faq_conv = ConversationHandler(
       entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
       states={
-        SELECTING_THEME: [MessageHandler(Filters.text, selectQuestion)],
-        SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
+        SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
+        SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)],
+        STOPPING: [CommandHandler('start', start)]
       },
-      fallbacks=[CommandHandler('stop', stopNested)]
+      fallbacks=[MessageHandler(Filters.text('Cancelar'), stopNested)]
     )
 
     """ sugestao_conv = ConversationHandler(
