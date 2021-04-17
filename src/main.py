@@ -1,6 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
-from config.envcfg import TOKEN
+from config.env import TOKEN
+from config.db import reminders
 import json
 
 FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION, STOPPING, END = map(chr, range(8))
@@ -52,6 +53,16 @@ def teste(update, context):
 
 def copia(update, context):
     response_message = update.message.text
+    print("update> ", update, "\n\n")
+    print(update.message.from_user.id)
+    print(update.message.text)
+
+    newReminder = {
+        "author_id": update.message.from_user.id ,
+        "author_name": update.message.from_user.first_name ,
+        "text": update.message.text, 
+    }
+    reminders.insert_one(newReminder)
 
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=response_message+"!"
