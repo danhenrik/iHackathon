@@ -58,9 +58,7 @@ def teste(update, context):
     print("context.bot> ", context.bot, "\n\n")
     print("update> ", update, "\n\n")
 
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text=response_message
-    )
+    say(update, context, response_message)
 
 
 def validateDate(context):
@@ -74,30 +72,104 @@ def validateDate(context):
         return False
 
 
+def checkPrivate(update, context):
+    return update.message.chat.type == "private"
+
+
 def setBirthday(update, context):
     userID = update.message.from_user.id
     checkdb = birthdays.count_documents({"userID": userID})
     print(update)
-    if(validateDate(context)):
-        birthday = context.args[0].split("/")
-        dayMonth = birthday[0] + birthday[1]
-        year = birthday[2]
-        newBirthday = {
-            "userID": update.message.from_user.id,
-            "userName": update.message.from_user.first_name,
-            "dayMonth": dayMonth,
-            "year": year
-        }
-        if(checkdb == 0):
-            birthdays.insert_one(newBirthday)
-            say(update, context, "Seu aniversário foi registrado!")
-        else:
-            birthdays.replace_one(
-                {"userID": update.message.from_user.id}, newBirthday)
-            say(update, context, "Seu aniversário foi atualizado!")
-
+    if(checkPrivate(update, context)):
+        say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
-        say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
+        if(validateDate(context)):
+            birthday = context.args[0].split("/")
+            dayMonth = birthday[0] + birthday[1]
+            year = birthday[2]
+            name = str(update.message.from_user.first_name)
+            if update.message.from_user.last_name:
+                print(update.message.from_user.first_name)
+                print(update.message.from_user.last_name)
+                name = name + " " + update.message.from_user.last_name
+            newBirthday = {
+                "userID": update.message.from_user.id,
+                "userName": name,
+                "dayMonth": dayMonth,
+                "year": year
+            }
+            if(checkdb == 0):
+                birthdays.insert_one(newBirthday)
+                say(update, context, "Seu aniversário foi registrado!")
+            else:
+                birthdays.replace_one(
+                    {"userID": update.message.from_user.id}, newBirthday)
+                say(update, context, "Seu aniversário foi atualizado!")
+
+        else:
+            say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
+
+
+def month(elem):
+    return elem["month"]
+
+
+def day(elem):
+    return elem["day"]
+
+
+def newMonth(month):
+    if(month == 1):
+        return "Janeiro"
+    if(month == 2):
+        return "Fevereiro"
+    if(month == 3):
+        return "Março"
+    if(month == 4):
+        return "Abril"
+    if(month == 5):
+        return "Maio"
+    if(month == 6):
+        return "Junho"
+    if(month == 7):
+        return "Julho"
+    if(month == 8):
+        return "Agosto"
+    if(month == 9):
+        return "Setembro"
+    if(month == 10):
+        return "Outubro"
+    if(month == 11):
+        return "Novembro"
+    if(month == 12):
+        return "Dezembro"
+
+
+def getBirthdays(update, context):
+    if(checkPrivate(update, context)):
+        say(update, context, "Essa funcionalidade é exclusiva para grupos")
+    else:
+        response_message = "Aniversariantes:\n"
+        all = birthdays.find()
+        arr = []
+        for i in all:
+            arr.append(i)
+            i["month"] = int(i["dayMonth"][2] + i["dayMonth"][3])
+            i["day"] = int(i["dayMonth"][0] + i["dayMonth"][1])
+        arr.sort(key=day)
+        arr.sort(key=month)
+        prevmonth = 0
+        print(prevmonth)
+
+        for j in arr:
+            print(j["month"])
+            if(j["month"] != prevmonth):
+                response_message += newMonth(j["month"])+":\n"
+            prevmonth == j["month"]
+            print(j)
+            response_message += str(j["day"]) + " - " + j["userName"] + "\n"
+
+        say(update, context, response_message)
 
 
 def copia(update, context):
@@ -113,13 +185,10 @@ def copia(update, context):
     }
     # birthdays.insert_one(newReminder)
 
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text=response_message+"!"
-    )
+    say(update, context, response_message+"!")
+
 
 # Funções teste conversa
-
-
 def start(update, context):
     if update.message.chat.type != 'private':
       text='Desculpe, mas só podemos ter uma conversa no privado! ^^'
@@ -209,6 +278,13 @@ def getSuggestion(update, context):
 
     return TYPING_SUGGESTION
 
+def getHelp(update, context):
+    if(update.message.chat.type == "group"):
+        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
+    else:
+        response_message = "Commands:\n\n/birthdaylist"
+    say(update, context, response_message)
+
 
 def sendSuggestion(update, context):
 
@@ -239,10 +315,6 @@ def sendSegfault(update, context):
 
 def main():
     updater = Updater(token=TOKEN)
-
-    schedule.every(1).day.at("11:30").do(checkBirthday)
-    schedule.every(1).minutes.do(checkReminder)
-    #schedule.every(10).seconds.do(testeSched)
 
     dispatcher = updater.dispatcher
 
@@ -291,9 +363,11 @@ def main():
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
     dispatcher.add_handler(starting_conv)
     dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
+    dispatcher.add_handler(CommandHandler("birthdaylist", getBirthdays))
     dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
     dispatcher.add_handler(CommandHandler("sugestao", Sugestao))
     dispatcher.add_handler(CommandHandler("181", DenunciaAnonima))
+    dispatcher.add_handler(CommandHandler("help", getHelp))
     dispatcher.add_handler(CommandHandler("teste", teste))
     # Quando chegar uma menssagem e ela n for um comando da trigger na função segundo parâmetro
     dispatcher.add_handler(MessageHandler(
