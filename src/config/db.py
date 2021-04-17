@@ -5,3 +5,4 @@ cluster = MongoClient(MONGO_DB_URL)
 db = cluster.iSpirito
 reminders = db.reminders
 birthdays = db.birthdays
+faq = db.FAQ

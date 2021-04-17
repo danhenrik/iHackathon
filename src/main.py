@@ -1,10 +1,20 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from config.env import TOKEN
-from config.db import reminders,birthdays
+from config.db import reminders,birthdays, faq
 import json
 
-FAQ, DIRETORIAS, TECNOLOGIAS, SELECTING_ACTION, SELECTING_THEME, SELECTING_QUESTION, STOPPING, END = map(chr, range(8))
+(
+  FAQ,
+  DIRETORIAS,
+  TECNOLOGIAS,
+  SELECTING_ACTION,
+  SELECTING_THEME,
+  SELECTING_QUESTION,
+  STOPPING,
+  END,
+  TYPING_TARGET,
+  TYPING_SUGGESTION ) = map(chr, range(10))
 
 def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
@@ -87,13 +97,16 @@ def start(update, context):
     ['Xapralá']
   ]
   markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-  text = ("Olá! Com o que posso ajudar?")
+  text = ('Olá! Eu sou o iSpirito.\n'
+          'Sou seu assistente pessoal da iJunior!\n'
+          'Com o que posso ajudar?')
   update.message.reply_text(text=text, reply_markup=markup)
 
   return SELECTING_ACTION
 
 def selectTheme(update, context):
   text = "Sobre qual assunto é sua dúvida?"
+
   reply_keyboard = [
     ['Diretorias', 'Tecnologias', 'Outros'],
     ['Cancelar']
@@ -104,11 +117,19 @@ def selectTheme(update, context):
   return SELECTING_THEME
 
 def selectQuestion(update, context):
-  reply_keyboard = [
-    ['Pergunta 1', 'Pergunta 2'],
-    ['Pergunta 3', 'Outra'],
-    ['Cancelar']
-  ]
+  tema = update.message.text
+
+  if tema == 'Cancelar':
+    start(update, context)
+    return None
+
+  reply_keyboard = []
+
+  for pergunta in faq.find({"tema": tema}):
+    reply_keyboard.append([pergunta['enunciado']])
+
+  reply_keyboard.append(['Outra', 'Cancelar'])
+    
   markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
   text="Perguntas comuns desse tema:"
   update.message.reply_text(text=text, reply_markup = markup)
@@ -116,18 +137,48 @@ def selectQuestion(update, context):
   return SELECTING_QUESTION
 
 def showAnswer(update, context):
-  pergunta = update.message.text
-  if pergunta == 'Cancelar':
-    return STOPPING
-  
-  text = f'Resposta da pergunta: {pergunta}'
+  enunciado = update.message.text
+  if enunciado == 'Cancelar':
+    start(update, context)
+    return None
+
+  pergunta = faq.find_one({"enunciado": enunciado})
+
+  text = pergunta['resposta']
   update.message.reply_text(text=text)
 
-def stopNested(update, context):
-  return STOPPING
+def getTarget(update, context):
+  text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
+          'Qual será o alvo da sua sugestão?')
+  reply_keyboard = [['Cancelar']]
+  markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+  update.message.reply_text(text=text, reply_markup=markup)
 
-def stop(update, context):
-  return END
+  return TYPING_TARGET
+
+def getSuggestion(update, context):
+  alvo = update.message.text
+  if alvo == 'Cancelar':
+    start(update, context)
+    return None
+  
+  text = ('Perfeito!\n'
+          'E qual será a sua sugestão?')
+  reply_keyboard = [['Cancelar']]
+  markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+  update.message.reply_text(text=text, reply_markup=markup)
+
+  return TYPING_SUGGESTION
+
+def registerSuggestion(update, context):
+
+  # TODO Enviar email
+
+  update.message.reply_text(text='Sua sugestão será enviada diretamente para nosso email!')
+  update.message.reply_text(text='Muito obrigado!')
+  start(update, context)
+
+  return None
 
 
 
@@ -140,23 +191,24 @@ def main():
       entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
       states={
         SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
-        SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)],
-        STOPPING: [CommandHandler('start', start)]
+        SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
       },
-      fallbacks=[MessageHandler(Filters.text('Cancelar'), stopNested)]
+      fallbacks=[]
     )
 
-    """ sugestao_conv = ConversationHandler(
-      entry_points=[CallbackQueryHandler(getAlvo, patten=f'^{SUGESTAO}$')],
-      state={
-        TYPING: [CallbackQueryHandler()]
-      }
-    ) """
+    sugestao_conv = ConversationHandler(
+      entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
+      states={
+        TYPING_TARGET: [MessageHandler(Filters.text, getSuggestion)],
+        TYPING_SUGGESTION: [MessageHandler(Filters.text, registerSuggestion)]
+      },
+      fallbacks=[]
+    )
 
     selectionHandlers = [
       faq_conv,
-      """ sugestao_conv,
-      lembrete_conv,
+      sugestao_conv,
+      """ lembrete_conv,
       justificativa_conv,
       segfault_conv """
     ]
@@ -167,7 +219,7 @@ def main():
         SELECTING_ACTION: selectionHandlers,
         STOPPING: [CommandHandler('start', start)]
       },
-      fallbacks=[CommandHandler('stop', stop)]
+      fallbacks=[]
     )
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
