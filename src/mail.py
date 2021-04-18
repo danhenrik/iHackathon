@@ -22,7 +22,7 @@ def send_mail(subject, message):
   server.starttls()
   
   # Login Credentials for sending the mail
-  server.login(msg['From'], SMTP_PASSWORD)
+  server.login(msg['From'], password)
   
   
   # send the message via the server.
