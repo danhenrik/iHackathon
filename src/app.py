@@ -1,3 +1,5 @@
+import threading
+from typing import ContextManager
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler
 from env import TOKEN
@@ -5,9 +7,10 @@ from scheduledEvents import checkBirthday, checkReminder
 import multiprocessing
 from db import reminders, birthdays
 from mail import send_mail
-from actions import say, start, restart, end, getHelp
+from actions import say, start, restart, end, getHelp, checkPrivate
 from convs import faq, suggestion, justification, segfault
 import schedule
+import time
 
 (
     SELECTING_ACTION,
@@ -19,22 +22,6 @@ import schedule
     RESTART) = map(chr, range(7))
 
 
-def Lembrete(update, context):
-    response_message = "Só me fala o dia e a hora"
-
-    # TODO: Salvar o lembrete no banco
-    say(update, context, response_message)
-
-
-def teste(update, context):
-    response_message = "Testado"
-    print("context> ", context, "\n\n")
-    print("context.bot> ", context.bot, "\n\n")
-    print("update> ", update, "\n\n")
-
-    say(update, context, response_message)
-
-
 def validateDate(context):
     if (not len(context.args) == 0):
         date_string = context.args[0]
@@ -44,10 +31,6 @@ def validateDate(context):
             return True
     else:
         return False
-
-
-def checkPrivate(update):
-    return update.message.chat.type == "private"
 
 
 def setBirthday(update, context):
@@ -143,22 +126,36 @@ def getBirthdays(update, context):
         say(update, context, response_message)
 
 
-def sendTeste(update, context):
-    say(update, context, "Foi")
-
-
-def sched(update, context):
-    schedule.every().second.do(checkReminder)
-    schedule.every().second.do(sendTeste, update, context)
-    # schedule.every().day.at("11:30").do(birthdayToday)
-    while True:
-        schedule.run_pending()
+def birthdayToday(update, context):
+    all = checkBirthday()
+    if(all):
+        if(len(all) == 1):
+            response_message = "Hoje temos um aniversariante!!!!!\nParabéns " + \
+                all[0]["userName"] + " pelos " + \
+                str(all[0]["idade"]) + " aninhos!"
+        else:
+            response_message = "Hoje temos alguns aniversariantes!!!!!\n"
+            for i in all:
+                response_message += "Parabéns " + \
+                    i["userName"] + " pelos " + str(i["idade"]) + " aninhos!\n"
+        say(update, context, "🥳")
+        say(update, context, "🥳")
+        say(update, context, "🥳")
+        say(update, context, response_message)
 
 
 def init(update, context):
-    scheduleProcess = multiprocessing.Process(
-        target=sched, args=[update, context])
-    scheduleProcess.start()
+    if(not context.user_data.get("initCheck")):
+        context.user_data["initCheck"] = True
+
+        def sched():
+            # TODO: Reminder com sync com google agenda e afins
+            # schedule.every().minute.do(checkReminder)
+            schedule.every().day.at("12:30").do(birthdayToday, update, context)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+        threading.Thread(target=sched).start()
 
 
 def bot():
@@ -186,23 +183,18 @@ def bot():
         fallbacks=[MessageHandler(Filters.text, start)]
     )
 
-    # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
     dispatcher.add_handler(starting_conv)
     dispatcher.add_handler(CommandHandler("init", init))
     dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
     dispatcher.add_handler(CommandHandler("birthdaylist", getBirthdays))
-    dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
     dispatcher.add_handler(CommandHandler("help", getHelp))
-    dispatcher.add_handler(CommandHandler("teste", teste))
-    # Quando chegar uma menssagem e ela n for um comando da trigger na função segundo parâmetro
 
     updater.start_polling()
     updater.idle()
 
 
 def main():
-    botProcess = multiprocessing.Process(target=bot)
-    botProcess.start()
+    multiprocessing.Process(target=bot).start()
 
 
 if __name__ == "__main__":

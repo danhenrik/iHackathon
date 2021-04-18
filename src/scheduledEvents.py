@@ -8,9 +8,12 @@ def checkBirthday():
     today_year = today.strftime("%Y")
 
     aniversariantes = birthdays.find({"dayMonth": today_dayMonth})
+    response = []
     for i in aniversariantes:
         i["idade"] = int(today_year) - int(i["year"])
-    return aniversariantes
+        response.append(i)
+    print(response)
+    return response
 
 
 def checkReminder():

@@ -3,10 +3,12 @@ from telegram.ext import ConversationHandler
 
 (SELECTING_ACTION, RESTART) = map(chr, range(2))
 
+
 def say(update, context, message):
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=message
     )
+
 
 def start(update, context):
     if update.message.chat.type != 'private':
@@ -32,18 +34,22 @@ def start(update, context):
 
     return SELECTING_ACTION
 
+
 def restart(update, context):
     context.user_data[RESTART] = True
     start(update, context)
     return ConversationHandler.END
 
+
 def end(update, context):
     say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
     return ConversationHandler.END
 
+# Retorna true se o bot foi chamado no privado e false se em grupo
+def checkPrivate(update):
+    return update.message.chat.type == "private"
+
+
 def getHelp(update, context):
-    if(update.message.chat.type == "group"):
-        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
-    else:
-        response_message = "Commands:\n\n/birthdaylist"
+    response_message = "Olá sou o iSpirito, por enquanto eu apenas registro e lembro os aniversários de todo mundo, os comandos são os seguintes:\n/mybirthday <DD/MM/AAAA> Para registrar seu aniversário\n/birthdaylist Lista os aniversários registrados"
     say(update, context, response_message)
