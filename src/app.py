@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from env import TOKEN
 from scheduledEvents import checkBirthday, checkReminder
@@ -12,9 +12,11 @@ import schedule
     SELECTING_THEME,
     SELECTING_QUESTION,
     TYPING_TARGET,
+    TARGET,
     TYPING_SUGGESTION,
+    TYPING_JUSTIFICATION,
     TYPING_SEGFAULT,
-    RESTART) = map(chr, range(7))
+    RESTART) = map(chr, range(9))
 
 
 def say(update, context, message):
@@ -155,7 +157,8 @@ def start(update, context):
         return ConversationHandler.END
 
     reply_keyboard = [
-        ['FAQ', 'Sugestão', 'Segfault'],
+        ['FAQ', 'Sugestão'],
+        ['Segfault', 'Justificativa'],
         ['Xapralá']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
@@ -211,16 +214,6 @@ def showAnswer(update, context):
     update.message.reply_text(text=text)
 
 
-def getTarget(update, context):
-    text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
-            'Qual será o alvo da sua sugestão?')
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_TARGET
-
-
 def getHelp(update, context):
     if(update.message.chat.type == "group"):
         response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
@@ -229,7 +222,18 @@ def getHelp(update, context):
     say(update, context, response_message)
 
 
+def getSuggestionTarget(update, context):
+    text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
+            'Qual será o alvo da sua sugestão?')
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
+
+    return TYPING_TARGET
+
 def getSuggestion(update, context):
+    target = update.message.text
+    context.user_data[TARGET] = target
     text = ('Perfeito!\n'
             'E qual será a sua sugestão?')
     reply_keyboard = [['Cancelar']]
@@ -241,19 +245,61 @@ def getSuggestion(update, context):
 
 def sendSuggestion(update, context):
 
-    suggestion = update.message.text
+    suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
+                  f'Sugestão: {update.message.text}')
 
     send_mail('Sugestão', suggestion)
 
     update.message.reply_text(
         text='Sua sugestão será enviada diretamente para nosso email!')
-    update.message.reply_text(text='Muito obrigado!')
-    start(update, context)
+    update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
+    
+    del context.user_data[TARGET]
+
+    return ConversationHandler.END
+
+
+def getJustificationTarget(update, context):
+    text = ('Certo. Precisa justificar alguma falta.\n'
+            'Exatamente que situação você está justificando?')
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
+
+    return TYPING_TARGET
+
+def getJustification(update, context):
+    target = update.message.text
+    context.user_data[TARGET] = target
+    text = ('Perfeito!\n'
+            'E qual foi a razão?')
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
+
+    return TYPING_JUSTIFICATION
+
+
+def sendJustification(update, context):
+
+    justification = (f'Quem está justificando: {update.from_user.first_name}\n'
+        f'O que está justificando: {context.user_data.get(TARGET)}\n'
+        f'Justificativa: {update.message.text}')
+
+    send_mail('Justificativa', justification)
+
+    update.message.reply_text(
+        text='Sua justificativa será enviada diretamente para nosso email!')
+    update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
+    
+    del context.user_data[TARGET]
+
+    return ConversationHandler.END
 
 
 def getSegfault(update, context):
     text = ('Que pena que você tenha uma reclamação\n'
-            'Mas que bom que você está nos contando!\n'
+            'Mas que bom que você está me contando!\n'
             'Qual é o problema? Não se preocupe, essa denúncia é anônima')
 
     reply_keyboard = [['Cancelar']]
@@ -269,7 +315,9 @@ def sendSegfault(update, context):
     text = ('Muito obrigado pela sua submissão!\n'
             'Sua reclamação já foi enviada para o nosso email!')
 
-    update.message.reply_text(text=text)
+    update.message.reply_text(text=text, reply_markup = ReplyKeyboardRemove())
+
+    return ConversationHandler.END
 
 
 def restart(update, context):
@@ -317,11 +365,21 @@ def bot():
     )
 
     sugestao_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
+        entry_points=[MessageHandler(Filters.text(['Sugestão']), getSuggestionTarget)],
         states={
             TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
             TYPING_SUGGESTION: [MessageHandler(
                 ~Filters.text(['Cancelar']) & Filters.text, sendSuggestion)]
+        },
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
+    )
+
+    justification_conv = ConversationHandler(
+        entry_points=[MessageHandler(Filters.text(['Justificativa']), getJustificationTarget)],
+        states={
+            TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getJustification)],
+            TYPING_JUSTIFICATION: [MessageHandler(
+                ~Filters.text(['Cancelar']) & Filters.text, sendJustification)]
         },
         fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
@@ -338,6 +396,7 @@ def bot():
     selectionHandlers = [
         faq_conv,
         sugestao_conv,
+        justification_conv,
         segfault_conv,
         MessageHandler(Filters.text(['Xapralá']), end)
     ]
@@ -351,7 +410,7 @@ def bot():
         states={
             SELECTING_ACTION: selectionHandlers
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text, start)]
     )
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
