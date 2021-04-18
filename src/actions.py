@@ -3,11 +3,15 @@ from telegram.ext import ConversationHandler
 
 (SELECTING_ACTION, RESTART) = map(chr, range(2))
 
+# Função simples para enviar uma mensagem
 def say(update, context, message):
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=message
     )
 
+# Função inicial da conversa principal com o bot.
+# Envia mensagem de apresentação se necessário e atualiza o estado para esperar a entrada de qual conversa aninhada iniciar
+# Envia um teclado para auxiliar na escolha
 def start(update, context):
     if update.message.chat.type != 'private':
         text = 'Desculpe, mas só podemos ter uma conversa no privado! ^-^'
@@ -32,15 +36,18 @@ def start(update, context):
 
     return SELECTING_ACTION
 
+# Função usada no fallback das conversas aninhadas para retornar ao início da conversa principal
 def restart(update, context):
     context.user_data[RESTART] = True
     start(update, context)
     return ConversationHandler.END
 
+# Função usada para encerrar a conversa principal
 def end(update, context):
     say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
     return ConversationHandler.END
 
+# Função para exibir os comandos disponíveis do bot
 def getHelp(update, context):
     if(update.message.chat.type == "group"):
         response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
