@@ -1,28 +1,22 @@
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
+from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler
 from env import TOKEN
 from scheduledEvents import checkBirthday, checkReminder
 import multiprocessing
-from db import reminders, birthdays, faq
+from db import reminders, birthdays
 from mail import send_mail
+from actions import say, start, restart, end, getHelp
+from convs import faq, suggestion, justification, segfault
 import schedule
 
 (
     SELECTING_ACTION,
-    SELECTING_THEME,
-    SELECTING_QUESTION,
     TYPING_TARGET,
     TARGET,
     TYPING_SUGGESTION,
     TYPING_JUSTIFICATION,
     TYPING_SEGFAULT,
-    RESTART) = map(chr, range(9))
-
-
-def say(update, context, message):
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text=message
-    )
+    RESTART) = map(chr, range(7))
 
 
 def Lembrete(update, context):
@@ -149,203 +143,6 @@ def getBirthdays(update, context):
         say(update, context, response_message)
 
 
-# Funções teste conversa
-def start(update, context):
-    if update.message.chat.type != 'private':
-        text = 'Desculpe, mas só podemos ter uma conversa no privado! ^-^'
-        update.message.reply_text(text=text)
-        return ConversationHandler.END
-
-    reply_keyboard = [
-        ['FAQ', 'Sugestão'],
-        ['Segfault', 'Justificativa'],
-        ['Xapralá']
-    ]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-
-    if not context.user_data.get(RESTART):
-        intro = ('Olá!\nEu sou o iSpirito.\n'
-                 'Sou seu assistente pessoal da iJunior!')
-        update.message.reply_text(text=intro)
-
-    context.user_data[RESTART] = False
-    text = 'Com o que posso ajudar?'
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return SELECTING_ACTION
-
-
-def selectTheme(update, context):
-    text = "Sobre qual assunto é sua dúvida?"
-
-    reply_keyboard = [
-        ['Diretorias', 'Tecnologias', 'Outros'],
-        ['Cancelar']
-    ]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return SELECTING_THEME
-
-
-def selectQuestion(update, context):
-    tema = update.message.text
-
-    reply_keyboard = []
-
-    for pergunta in faq.find({"tema": tema}):
-        reply_keyboard.append([pergunta['enunciado']])
-
-    reply_keyboard.append(['Outra', 'Cancelar'])
-
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    text = "Perguntas comuns desse tema:"
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return SELECTING_QUESTION
-
-
-def showAnswer(update, context):
-    enunciado = update.message.text
-
-    pergunta = faq.find_one({"enunciado": enunciado})
-
-    text = pergunta['resposta']
-    update.message.reply_text(text=text)
-
-
-def getHelp(update, context):
-    if(update.message.chat.type == "group"):
-        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
-    else:
-        response_message = "Commands:\n\n/birthdaylist"
-    say(update, context, response_message)
-
-
-def getSuggestionTarget(update, context):
-    text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
-            'Qual será o alvo da sua sugestão?')
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_TARGET
-
-
-def getSuggestion(update, context):
-    target = update.message.text
-    context.user_data[TARGET] = target
-    text = ('Perfeito!\n'
-            'E qual será a sua sugestão?')
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_SUGGESTION
-
-
-def sendSuggestion(update, context):
-
-    suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
-                  f'Sugestão: {update.message.text}')
-
-    send_mail('Sugestão', suggestion)
-
-    update.message.reply_text(
-        text='Sua sugestão será enviada diretamente para nosso email!')
-    update.message.reply_text(text='Muito obrigado!',
-                              reply_markup=ReplyKeyboardRemove())
-
-    del context.user_data[TARGET]
-
-    return ConversationHandler.END
-
-
-def getJustificationTarget(update, context):
-    text = ('Certo. Precisa justificar alguma falta.\n'
-            'Exatamente que situação você está justificando?')
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_TARGET
-
-
-def getJustification(update, context):
-    target = update.message.text
-    context.user_data[TARGET] = target
-    text = ('Perfeito!\n'
-            'E qual foi a razão?')
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_JUSTIFICATION
-
-
-def sendJustification(update, context):
-
-    justification = (f'Quem está justificando: {update.from_user.first_name}\n'
-                     f'O que está justificando: {context.user_data.get(TARGET)}\n'
-                     f'Justificativa: {update.message.text}')
-
-    send_mail('Justificativa', justification)
-
-    update.message.reply_text(
-        text='Sua justificativa será enviada diretamente para nosso email!')
-    update.message.reply_text(text='Muito obrigado!',
-                              reply_markup=ReplyKeyboardRemove())
-
-    del context.user_data[TARGET]
-
-    return ConversationHandler.END
-
-
-def getSegfault(update, context):
-    text = ('Que pena que você tenha uma reclamação\n'
-            'Mas que bom que você está me contando!\n'
-            'Qual é o problema? Não se preocupe, essa denúncia é anônima')
-
-    reply_keyboard = [['Cancelar']]
-    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    update.message.reply_text(text=text, reply_markup=markup)
-
-    return TYPING_SEGFAULT
-
-
-def sendSegfault(update, context):
-    segfault = update.message.text
-    send_mail('Segfault', segfault)
-    text = ('Muito obrigado pela sua submissão!\n'
-            'Sua reclamação já foi enviada para o nosso email!')
-
-    update.message.reply_text(text=text, reply_markup=ReplyKeyboardRemove())
-
-    return ConversationHandler.END
-
-
-def restart(update, context):
-    context.user_data[RESTART] = True
-    start(update, context)
-    return ConversationHandler.END
-
-
-def end(update, context):
-    say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
-    return ConversationHandler.END
-
-
-def birthdayToday(update, context):
-    aniversariantes = checkBirthday()
-    print("Rodou")
-    print(update)
-    print(context)
-
-    if(aniversariantes):
-        response_message = ""
-        say(update, context, response_message)
-
-
 def sendTeste(update, context):
     say(update, context, "Foi")
 
@@ -353,7 +150,7 @@ def sendTeste(update, context):
 def sched(update, context):
     schedule.every().second.do(checkReminder)
     schedule.every().second.do(sendTeste, update, context)
-    schedule.every().day.at("11:30").do(birthdayToday)
+    # schedule.every().day.at("11:30").do(birthdayToday)
     while True:
         schedule.run_pending()
 
@@ -369,52 +166,11 @@ def bot():
 
     dispatcher = updater.dispatcher
 
-    faq_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
-        states={
-            SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
-            SELECTING_QUESTION: [MessageHandler(
-                ~Filters.text(['Cancelar']) & Filters.text, showAnswer)]
-        },
-        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
-    )
-
-    sugestao_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text(
-            ['Sugestão']), getSuggestionTarget)],
-        states={
-            TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
-            TYPING_SUGGESTION: [MessageHandler(
-                ~Filters.text(['Cancelar']) & Filters.text, sendSuggestion)]
-        },
-        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
-    )
-
-    justification_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text(
-            ['Justificativa']), getJustificationTarget)],
-        states={
-            TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getJustification)],
-            TYPING_JUSTIFICATION: [MessageHandler(
-                ~Filters.text(['Cancelar']) & Filters.text, sendJustification)]
-        },
-        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
-    )
-
-    segfault_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
-        states={
-            TYPING_SEGFAULT: [MessageHandler(~Filters.text(
-                ['Cancelar']) & Filters.text, sendSegfault)]
-        },
-        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
-    )
-
     selectionHandlers = [
-        faq_conv,
-        sugestao_conv,
-        justification_conv,
-        segfault_conv,
+        faq.conv_handler,
+        suggestion.conv_handler,
+        justification.conv_handler,
+        segfault.conv_handler,
         MessageHandler(Filters.text(['Xapralá']), end)
     ]
 
