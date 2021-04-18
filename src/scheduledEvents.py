@@ -12,9 +12,5 @@ def checkBirthday():
     for i in aniversariantes:
         i["idade"] = int(today_year) - int(i["year"])
         response.append(i)
-    print(response)
     return response
 
-
-def checkReminder():
-    print("Rodou uma vez")

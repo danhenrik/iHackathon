@@ -3,7 +3,7 @@ from typing import ContextManager
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler
 from env import TOKEN
-from scheduledEvents import checkBirthday, checkReminder
+from scheduledEvents import checkBirthday
 import multiprocessing
 from db import reminders, birthdays
 from mail import send_mail
@@ -93,7 +93,6 @@ def birthdayToday(update, context):
 def setBirthday(update, context):
     userID = update.message.from_user.id
     checkdb = birthdays.count_documents({"userID": userID})
-    print(update)
     if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
@@ -136,14 +135,10 @@ def getBirthdays(update, context):
         arr.sort(key=day)
         arr.sort(key=month)
         prevmonth = 0
-        print(prevmonth)
-
         for j in arr:
-            print(j["month"])
             if(j["month"] != prevmonth):
-                response_message += newMonth(j["month"])+":\n"
+                response_message += newMonth(j["month"])+"\n"
             prevmonth == j["month"]
-            print(j)
             response_message += str(j["day"]) + " - " + j["userName"] + "\n"
         say(update, context, response_message)
 
@@ -166,8 +161,6 @@ def init(update, context):
         context.user_data["initCheck"] = True
 
         def sched():
-            # TODO: Reminder com sync com google agenda e afins
-            # schedule.every().minute.do(checkReminder)
             schedule.every().day.at("12:30").do(birthdayToday, update, context)
             while True:
                 schedule.run_pending()
