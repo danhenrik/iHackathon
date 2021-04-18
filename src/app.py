@@ -11,6 +11,7 @@ from actions import say, start, restart, end
 from convs import faq, suggestion, justification, segfault
 import schedule
 import time
+import random
 
 """ Módulo principal, aqui é onde a mágica acontece """
 
@@ -114,11 +115,15 @@ def setBirthday(update, context):
             }
             if(checkdb == 0):
                 birthdays.insert_one(newBirthday)
-                say(update, context, "Vou me lembrar! (É sério)")
+                msgs = ["Vou me lembrar! (É sério)","Anotei aqui!","Seu aniversário agora está registrado"]
+                index = random.randint(0,len(msgs)-1)
+                say(update, context, msgs[index])
             else:
                 birthdays.replace_one(
                     {"userID": update.message.from_user.id}, newBirthday)
-                say(update, context, "Seu aniversário foi atualizado!")
+                msgs = ["Atualizei aqui!","Seu aniversário foi atualizado!"]
+                index = random.randint(0,len(msgs)-1)
+                say(update, context, msgs[index])
 
         else:
             userExists = birthdays.find_one({"userID":update.message.from_user.id })
