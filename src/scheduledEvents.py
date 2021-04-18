@@ -1,6 +1,3 @@
-import datetime
-import sys
-import importlib
 from datetime import date
 from db import birthdays
 
@@ -18,4 +15,3 @@ def checkBirthday():
 
 def checkReminder():
     print("Rodou uma vez")
-    return "blablabla"

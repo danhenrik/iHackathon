@@ -1,13 +1,12 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from env import TOKEN
-from scheduledEvents import checkBirthday, checkReminder
 import time
-
-import schedule
+from scheduledEvents import checkBirthday, checkReminder
+import multiprocessing
 from db import reminders, birthdays, faq
 from mail import send_mail
-import json
+import schedule
 
 (
     SELECTING_ACTION,
@@ -26,29 +25,14 @@ def say(update, context, message):
     )
 
 
+def reply(update, message):
+    update.message.reply_text(text=message)
+
+
 def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
 
     # TODO: Salvar o lembrete no banco
-    say(update, context, response_message)
-
-
-def Sugestao(update, context):
-    response_message = "Qualquer coisa"
-
-    # TODO: Pergunta qual a sugestão, depois pra quem e por fim manda a sugestão
-    say(update, context, response_message)
-
-
-def unknown(update, context):
-    response_message = "Como é que é?"
-    say(update, context, response_message)
-
-
-def DenunciaAnonima(update, context):
-    response_message = "Manda a braba"
-
-    # TODO: Pega a proxima mensagem que te mandarem e manda ela pro RH
     say(update, context, response_message)
 
 
@@ -89,8 +73,6 @@ def setBirthday(update, context):
             year = birthday[2]
             name = str(update.message.from_user.first_name)
             if update.message.from_user.last_name:
-                print(update.message.from_user.first_name)
-                print(update.message.from_user.last_name)
                 name = name + " " + update.message.from_user.last_name
             newBirthday = {
                 "userID": update.message.from_user.id,
@@ -110,6 +92,7 @@ def setBirthday(update, context):
             say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
 
 
+# Ambas usadas para dar sort nos aniversários
 def month(elem):
     return elem["month"]
 
@@ -172,28 +155,12 @@ def getBirthdays(update, context):
         say(update, context, response_message)
 
 
-def copia(update, context):
-    response_message = update.message.text
-    print("update> ", update, "\n\n")
-    print(update.message.from_user.id)
-    print(update.message.text)
-
-    newReminder = {
-        "author_id": update.message.from_user.id,
-        "author_name": update.message.from_user.first_name,
-        "text": update.message.text,
-    }
-    # birthdays.insert_one(newReminder)
-
-    say(update, context, response_message+"!")
-
-
 # Funções teste conversa
 def start(update, context):
     if update.message.chat.type != 'private':
-      text='Desculpe, mas só podemos ter uma conversa no privado! ^^'
-      update.message.reply_text(text=text)
-      return None
+        text = 'Desculpe, mas só podemos ter uma conversa no privado! ^^'
+        reply(update, text)
+        return None
 
     reply_keyboard = [
         ['FAQ', 'Sugestão', 'Segfault'],
@@ -219,6 +186,14 @@ def selectTheme(update, context):
     update.message.reply_text(text=text, reply_markup=markup)
 
     return SELECTING_THEME
+
+
+def sendCongrats(birthdays):
+    do = "do"
+    print(birthdays)
+
+    # response_message =
+    # say(update, context, response_message)
 
 
 def selectQuestion(update, context):
@@ -251,7 +226,8 @@ def showAnswer(update, context):
     pergunta = faq.find_one({"enunciado": enunciado})
 
     text = pergunta['resposta']
-    update.message.reply_text(text=text)
+
+    reply(update, text)
 
 
 def getTarget(update, context):
@@ -278,6 +254,7 @@ def getSuggestion(update, context):
 
     return TYPING_SUGGESTION
 
+
 def getHelp(update, context):
     if(checkPrivate(update)):
         response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
@@ -297,23 +274,33 @@ def sendSuggestion(update, context):
     update.message.reply_text(text='Muito obrigado!')
     start(update, context)
 
-def getSegfault(update, context):
-    text=('Que pena que você tenha uma reclamação\n'
-      'Mas que bom que você está nos contando!\n'
-      'Qual é o problema? Não se preocupe, essa denúncia é anônima')
-    update.message.reply_text(text = text)
 
+def getSegfault(update, context):
+    text = ('Que pena que você tenha uma reclamação\n'
+            'Mas que bom que você está nos contando!\n'
+            'Qual é o problema? Não se preocupe, essa denúncia é anônima')
+
+    reply(update, text)
     return TYPING_SEGFAULT
+
 
 def sendSegfault(update, context):
     segfault = update.message.text
     send_mail('Segfault', segfault)
-    text=('Muito obrigado pela sua submissão!\n'
-      'Sua reclamação já foi enviada para o nosso email!')
+    text = ('Muito obrigado pela sua submissão!\n'
+            'Sua reclamação já foi enviada para o nosso email!')
 
-    update.message.reply_text(text=text)
+    reply(update, text)
 
-def main():
+
+def sched():
+    schedule.every().second.do(checkReminder)
+    schedule.every().day.at("10:30").do(checkBirthday)
+    while True:
+        schedule.run_pending()
+
+
+def bot():
     updater = Updater(token=TOKEN)
 
     dispatcher = updater.dispatcher
@@ -338,17 +325,17 @@ def main():
     )
 
     segfault_conv = ConversationHandler(
-      entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
-      states={
-        TYPING_SEGFAULT: [MessageHandler(Filters.text, sendSegfault)]
-      },
-      fallbacks=[]
+        entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
+        states={
+            TYPING_SEGFAULT: [MessageHandler(Filters.text, sendSegfault)]
+        },
+        fallbacks=[]
     )
 
     selectionHandlers = [
-      faq_conv,
-      sugestao_conv,
-      segfault_conv
+        faq_conv,
+        sugestao_conv,
+        segfault_conv
     ]
 
     starting_conv = ConversationHandler(
@@ -376,6 +363,13 @@ def main():
 
     updater.start_polling()
     updater.idle()
+
+
+def main():
+    scheduleProcess = multiprocessing.Process(target=sched)
+    botProcess = multiprocessing.Process(target=bot)
+    scheduleProcess.start()
+    botProcess.start()
 
 
 if __name__ == "__main__":
