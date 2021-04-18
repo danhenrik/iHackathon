@@ -118,7 +118,12 @@ def setBirthday(update, context):
                 say(update, context, "Seu aniversário foi atualizado!")
 
         else:
-            say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
+            userExists = birthdays.find_one({"userID":update.message.from_user.id })
+            if(userExists):
+                response_message = "Seu aniversário já está registrado, caso queira modificar a data insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'"
+            else:
+                response_message = "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'"
+            say(update, context, response_message)
 
 
 def getBirthdays(update, context):
