@@ -13,11 +13,10 @@ import json
     SELECTING_ACTION,
     SELECTING_THEME,
     SELECTING_QUESTION,
-    STOPPING,
-    END,
     TYPING_TARGET,
     TYPING_SUGGESTION,
-    TYPING_SEGFAULT) = map(chr, range(8))
+    TYPING_SEGFAULT,
+    RESTART) = map(chr, range(7))
 
 
 def say(update, context, message):
@@ -188,21 +187,26 @@ def copia(update, context):
     say(update, context, response_message+"!")
 
 
-# Funções teste conversa
+# Funções conversa
 def start(update, context):
     if update.message.chat.type != 'private':
-      text='Desculpe, mas só podemos ter uma conversa no privado! ^^'
+      text='Desculpe, mas só podemos ter uma conversa no privado! ^-^'
       update.message.reply_text(text=text)
-      return None
+      return ConversationHandler.END
 
     reply_keyboard = [
         ['FAQ', 'Sugestão', 'Segfault'],
         ['Xapralá']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    text = ('Olá! Eu sou o iSpirito.\n'
-            'Sou seu assistente pessoal da iJunior!\n'
-            'Com o que posso ajudar?')
+
+    if not context.user_data.get(RESTART):
+      intro = ('Olá!\nEu sou o iSpirito.\n'
+        'Sou seu assistente pessoal da iJunior!')
+      update.message.reply_text(text=intro)
+
+    context.user_data[RESTART] = False
+    text = 'Com o que posso ajudar?'
     update.message.reply_text(text=text, reply_markup=markup)
 
     return SELECTING_ACTION
@@ -224,10 +228,6 @@ def selectTheme(update, context):
 def selectQuestion(update, context):
     tema = update.message.text
 
-    if tema == 'Cancelar':
-        start(update, context)
-        return None
-
     reply_keyboard = []
 
     for pergunta in faq.find({"tema": tema}):
@@ -244,9 +244,6 @@ def selectQuestion(update, context):
 
 def showAnswer(update, context):
     enunciado = update.message.text
-    if enunciado == 'Cancelar':
-        start(update, context)
-        return None
 
     pergunta = faq.find_one({"enunciado": enunciado})
 
@@ -263,13 +260,15 @@ def getTarget(update, context):
 
     return TYPING_TARGET
 
+def getHelp(update, context):
+    if(update.message.chat.type == "group"):
+        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
+    else:
+        response_message = "Commands:\n\n/birthdaylist"
+    say(update, context, response_message)
+
 
 def getSuggestion(update, context):
-    alvo = update.message.text
-    if alvo == 'Cancelar':
-        start(update, context)
-        return None
-
     text = ('Perfeito!\n'
             'E qual será a sua sugestão?')
     reply_keyboard = [['Cancelar']]
@@ -277,13 +276,6 @@ def getSuggestion(update, context):
     update.message.reply_text(text=text, reply_markup=markup)
 
     return TYPING_SUGGESTION
-
-def getHelp(update, context):
-    if(update.message.chat.type == "group"):
-        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
-    else:
-        response_message = "Commands:\n\n/birthdaylist"
-    say(update, context, response_message)
 
 
 def sendSuggestion(update, context):
@@ -301,7 +293,10 @@ def getSegfault(update, context):
     text=('Que pena que você tenha uma reclamação\n'
       'Mas que bom que você está nos contando!\n'
       'Qual é o problema? Não se preocupe, essa denúncia é anônima')
-    update.message.reply_text(text = text)
+
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
 
     return TYPING_SEGFAULT
 
@@ -313,6 +308,15 @@ def sendSegfault(update, context):
 
     update.message.reply_text(text=text)
 
+def restart(update, context):
+    context.user_data[RESTART] = True
+    start(update, context)
+    return ConversationHandler.END
+
+def end(update, context):
+  say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
+  return ConversationHandler.END
+
 def main():
     updater = Updater(token=TOKEN)
 
@@ -322,40 +326,43 @@ def main():
         entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
         states={
             SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
-            SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
+            SELECTING_QUESTION: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, showAnswer)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     sugestao_conv = ConversationHandler(
         entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
         states={
-            TYPING_TARGET: [MessageHandler(Filters.text, getSuggestion)],
+            TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
             TYPING_SUGGESTION: [MessageHandler(
-                Filters.text, sendSuggestion)]
+                ~Filters.text(['Cancelar']) & Filters.text, sendSuggestion)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     segfault_conv = ConversationHandler(
       entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
       states={
-        TYPING_SEGFAULT: [MessageHandler(Filters.text, sendSegfault)]
+        TYPING_SEGFAULT: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, sendSegfault)]
       },
-      fallbacks=[]
+      fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     selectionHandlers = [
       faq_conv,
       sugestao_conv,
-      segfault_conv
+      segfault_conv,
+      MessageHandler(Filters.text(['Xapralá']), end)
     ]
 
     starting_conv = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[
+          CommandHandler('start', start),
+          MessageHandler(Filters.update, start)
+        ],
         states={
-            SELECTING_ACTION: selectionHandlers,
-            STOPPING: [CommandHandler('start', start)]
+            SELECTING_ACTION: selectionHandlers
         },
         fallbacks=[]
     )
