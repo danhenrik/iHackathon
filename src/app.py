@@ -189,8 +189,8 @@ def bot():
 def main():
     scheduleProcess = multiprocessing.Process(target=sched)
     botProcess = multiprocessing.Process(target=bot)
-    scheduleProcess.start()
     botProcess.start()
+    scheduleProcess.start()
 
 
 if __name__ == "__main__":
