@@ -12,6 +12,9 @@ from convs import faq, suggestion, justification, segfault
 import schedule
 import time
 
+""" Módulo principal, aqui é onde a mágica acontece """
+
+# Contantes declaradas pro python não surtar.
 (
     SELECTING_ACTION,
     TYPING_TARGET,
@@ -21,7 +24,7 @@ import time
     TYPING_SEGFAULT,
     RESTART) = map(chr, range(7))
 
-
+# Valida se a a entrada inserida está no formato de data demandado.
 def validateDate(context):
     if (not len(context.args) == 0):
         date_string = context.args[0]
@@ -32,19 +35,19 @@ def validateDate(context):
     else:
         return False
 
+# Retorna se o bot foi chamado no privado.
 def checkPrivate(update):
-    # Retorna se o bot foi chamado no privado
     return update.message.chat.type == "private"
 
+# Essa e a próxima função apenas retornam os campos específicos do dicionário pelos quais eu quero ordenar.
 def month(elem):
-    # Essa e a próxima função apenas retornam os campos específicos do dicionário pelos quais eu quero ordenar
     return elem["month"]
 
 
 def day(elem):
     return elem["day"]
 
-
+# Retorna o nome do mês baseado no número.
 def newMonth(month):
     if(month == 1):
         return "Janeiro"
@@ -71,7 +74,7 @@ def newMonth(month):
     if(month == 12):
         return "Dezembro"
 
-
+# Chama a função que checa se existe alguem no banco que faça aniversário no dia corrente e se houver manda a mensagem no grupo parabenizando.
 def birthdayToday(update, context):
     all = checkBirthday()
     if(all):
@@ -89,7 +92,7 @@ def birthdayToday(update, context):
         say(update, context, "🥳")
         say(update, context, response_message)
 
-
+# Registra o aniversário do usuário no banco caso a entrada cumpra os requisitos a partir do comando "/mybirthday".
 def setBirthday(update, context):
     userID = update.message.from_user.id
     checkdb = birthdays.count_documents({"userID": userID})
@@ -126,29 +129,30 @@ def setBirthday(update, context):
             say(update, context, response_message)
 
 
+# Lista todos os aniversariantes registrados a partir do comando "/birthdaylist"
 def getBirthdays(update, context):
     if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
         response_message = "Aniversariantes:\n"
-        all = birthdays.find()
-        arr = []
-        for i in all:
-            arr.append(i)
+        aniversariantes = birthdays.find()
+        niverArr = []
+        for i in aniversariantes:
+            niverArr.append(i)
             i["month"] = int(i["dayMonth"][2] + i["dayMonth"][3])
             i["day"] = int(i["dayMonth"][0] + i["dayMonth"][1])
-        arr.sort(key=day)
-        arr.sort(key=month)
-        prevmonth = 0
-        for j in arr:
-            if(j["month"] != prevmonth):
+        niverArr.sort(key=day)
+        niverArr.sort(key=month)
+        previousMonth = 0
+        for j in niverArr:
+            if(j["month"] != previousMonth):
                 response_message += newMonth(j["month"])+"\n"
-            prevmonth == j["month"]
+            previousMonth == j["month"]
             response_message += str(j["day"]) + " - " + j["userName"] + "\n"
         say(update, context, response_message)
 
 
-# Função para exibir os comandos disponíveis do bot
+# Manda uma mensagem a partir do comando "/help" falando um pouco sobre o bot, quais suas funcionalidades, e como acessá-las.
 def getHelp(update, context):
     response_message = "Olá sou o iSpirito, por enquanto em grupos eu apenas registro e lembro os" + \
         " aniversários de todo mundo, os comandos são os seguintes:\n/mybirthday <DD/MM/AAAA> Para registrar" + \
@@ -160,7 +164,7 @@ def getHelp(update, context):
         " no privado!\n Espero ser útil! 👻"
     say(update, context, response_message)
 
-
+# Inicializa um runtime paralelo que é o encarregado de checkar diariamente os aniversários e mandar a mensagem de parabéns no grupo.
 def init(update, context):
     if(not context.user_data.get("initCheck")):
         context.user_data["initCheck"] = True
@@ -172,7 +176,7 @@ def init(update, context):
                 time.sleep(1)
         threading.Thread(target=sched).start()
 
-
+# Inicializa o bot, incluindo todos seus comandos e interações possíveis.
 def bot():
     updater = Updater(token=TOKEN)
 
@@ -207,10 +211,10 @@ def bot():
     updater.start_polling()
     updater.idle()
 
-
+# Com uma outra biblioteca (a fim de evitar bugs) a main inicializa o bot em um runtime para que posteriormente não haja conflito com a funcionalidade de aniversário
 def main():
     multiprocessing.Process(target=bot).start()
 
-
+# Todos sabemos, starta a aplicação chamando a main
 if __name__ == "__main__":
     main()

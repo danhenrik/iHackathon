@@ -1,7 +1,9 @@
 from datetime import date
 from db import birthdays
 
+""" Módulo com função que será usada de tempo em tempo (scheduled) """
 
+# Função que consulta o banco e checa se existem aniversariantes no dia corrente
 def checkBirthday():
     today = date.today()
     today_dayMonth = today.strftime("%d%m")

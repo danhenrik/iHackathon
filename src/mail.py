@@ -3,6 +3,8 @@ from email.mime.text import MIMEText
 import smtplib
 from env import SMTP_HOST, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD
  
+""" Módulo de envio de email's """
+
 # Função de envio de email, recebe o assunto e a mensagem como parâmetros e envia pelo e para o email definido no env
 def send_mail(subject, message):
 
