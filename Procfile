@@ -1,2 +1,1 @@
-worker: cd src 
-worker: python app.py
+worker: python src/app.py
