@@ -7,7 +7,7 @@ from scheduledEvents import checkBirthday, checkReminder
 import multiprocessing
 from db import reminders, birthdays
 from mail import send_mail
-from actions import say, start, restart, end, getHelp, checkPrivate
+from actions import say, start, restart, end
 from convs import faq, suggestion, justification, segfault
 import schedule
 import time
@@ -32,40 +32,12 @@ def validateDate(context):
     else:
         return False
 
-
-def setBirthday(update, context):
-    userID = update.message.from_user.id
-    checkdb = birthdays.count_documents({"userID": userID})
-    print(update)
-    if(checkPrivate(update)):
-        say(update, context, "Essa funcionalidade é exclusiva para grupos")
-    else:
-        if(validateDate(context)):
-            birthday = context.args[0].split("/")
-            dayMonth = birthday[0] + birthday[1]
-            year = birthday[2]
-            name = str(update.message.from_user.first_name)
-            if update.message.from_user.last_name:
-                name = name + " " + update.message.from_user.last_name
-            newBirthday = {
-                "userID": update.message.from_user.id,
-                "userName": name,
-                "dayMonth": dayMonth,
-                "year": year
-            }
-            if(checkdb == 0):
-                birthdays.insert_one(newBirthday)
-                say(update, context, "Seu aniversário foi registrado!")
-            else:
-                birthdays.replace_one(
-                    {"userID": update.message.from_user.id}, newBirthday)
-                say(update, context, "Seu aniversário foi atualizado!")
-
-        else:
-            say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
-
+def checkPrivate(update):
+    # Retorna se o bot foi chamado no privado
+    return update.message.chat.type == "private"
 
 def month(elem):
+    # Essa e a próxima função apenas retornam os campos específicos do dicionário pelos quais eu quero ordenar
     return elem["month"]
 
 
@@ -100,6 +72,56 @@ def newMonth(month):
         return "Dezembro"
 
 
+def birthdayToday(update, context):
+    all = checkBirthday()
+    if(all):
+        if(len(all) == 1):
+            response_message = "Hoje temos um aniversariante!!!!!\nParabéns " + \
+                all[0]["userName"] + " pelos " + \
+                str(all[0]["idade"]) + " aninhos!"
+        else:
+            response_message = "Hoje temos alguns aniversariantes!!!!!\n"
+            for i in all:
+                response_message += "Parabéns " + \
+                    i["userName"] + " pelos " + str(i["idade"]) + " aninhos!\n"
+        say(update, context, "🥳")
+        say(update, context, "🥳")
+        say(update, context, "🥳")
+        say(update, context, response_message)
+
+
+def setBirthday(update, context):
+    userID = update.message.from_user.id
+    checkdb = birthdays.count_documents({"userID": userID})
+    print(update)
+    if(checkPrivate(update)):
+        say(update, context, "Essa funcionalidade é exclusiva para grupos")
+    else:
+        if(validateDate(context)):
+            birthday = context.args[0].split("/")
+            dayMonth = birthday[0] + birthday[1]
+            year = birthday[2]
+            name = str(update.message.from_user.first_name)
+            if update.message.from_user.last_name:
+                name = name + " " + update.message.from_user.last_name
+            newBirthday = {
+                "userID": update.message.from_user.id,
+                "userName": name,
+                "dayMonth": dayMonth,
+                "year": year
+            }
+            if(checkdb == 0):
+                birthdays.insert_one(newBirthday)
+                say(update, context, "Seu aniversário foi registrado!")
+            else:
+                birthdays.replace_one(
+                    {"userID": update.message.from_user.id}, newBirthday)
+                say(update, context, "Seu aniversário foi atualizado!")
+
+        else:
+            say(update, context, "Por favor insira sua data de aniversário no seguinte formato:'/mybirthday DD/MM/YYYY'")
+
+
 def getBirthdays(update, context):
     if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
@@ -126,22 +148,17 @@ def getBirthdays(update, context):
         say(update, context, response_message)
 
 
-def birthdayToday(update, context):
-    all = checkBirthday()
-    if(all):
-        if(len(all) == 1):
-            response_message = "Hoje temos um aniversariante!!!!!\nParabéns " + \
-                all[0]["userName"] + " pelos " + \
-                str(all[0]["idade"]) + " aninhos!"
-        else:
-            response_message = "Hoje temos alguns aniversariantes!!!!!\n"
-            for i in all:
-                response_message += "Parabéns " + \
-                    i["userName"] + " pelos " + str(i["idade"]) + " aninhos!\n"
-        say(update, context, "🥳")
-        say(update, context, "🥳")
-        say(update, context, "🥳")
-        say(update, context, response_message)
+# Função para exibir os comandos disponíveis do bot
+def getHelp(update, context):
+    response_message = "Olá sou o iSpirito, por enquanto em grupos eu apenas registro e lembro os" + \
+        " aniversários de todo mundo, os comandos são os seguintes:\n/mybirthday <DD/MM/AAAA> Para registrar" + \
+        " seu aniversário\n/birthdaylist Lista os aniversários registrados\n No privado tenho algumas funcionalidades" + \
+        " extras como:\n - Enviar email de justificativa pro RH\n - FAQ, com perguntas frequentes sobre diversos temas" + \
+        " pertinentes à empresa\n - Segfault, por meio do bot é possível fazer reclamações 100% anônimas pro RH" + \
+        " (espero que ninguem precise usar esse recurso)\n - Suegestões, onde vc pode fazer a sugestão de ideias" + \
+        " à empresa, podendo ser direcionado ou com o escopo geral\nPra usar essas funcionalidades basta me chamar" + \
+        " no privado com um /start\n Espero ser útil! 👻"
+    say(update, context, response_message)
 
 
 def init(update, context):
@@ -198,5 +215,4 @@ def main():
 
 
 if __name__ == "__main__":
-    print("press CTRL + C to cancel.")
     main()

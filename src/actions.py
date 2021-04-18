@@ -4,6 +4,8 @@ from telegram.ext import ConversationHandler
 (SELECTING_ACTION, RESTART) = map(chr, range(2))
 
 # Função simples para enviar uma mensagem
+
+
 def say(update, context, message):
     context.bot.send_message(
         chat_id=update.effective_chat.id, text=message
@@ -12,6 +14,8 @@ def say(update, context, message):
 # Função inicial da conversa principal com o bot.
 # Envia mensagem de apresentação se necessário e atualiza o estado para esperar a entrada de qual conversa aninhada iniciar
 # Envia um teclado para auxiliar na escolha
+
+
 def start(update, context):
     if update.message.chat.type != 'private':
         text = 'Desculpe, mas só podemos ter uma conversa no privado! ^-^'
@@ -49,12 +53,3 @@ def end(update, context):
     say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
     return ConversationHandler.END
 
-# Retorna true se o bot foi chamado no privado e false se em grupo
-def checkPrivate(update):
-    return update.message.chat.type == "private"
-
-
-# Função para exibir os comandos disponíveis do bot
-def getHelp(update, context):
-    response_message = "Olá sou o iSpirito, por enquanto eu apenas registro e lembro os aniversários de todo mundo, os comandos são os seguintes:\n/mybirthday <DD/MM/AAAA> Para registrar seu aniversário\n/birthdaylist Lista os aniversários registrados"
-    say(update, context, response_message)
