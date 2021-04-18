@@ -53,9 +53,15 @@ def sendJustification(update, context):
     update.message.reply_text(text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :(", reply_markup = ReplyKeyboardRemove())
     return ConversationHandler.END
 
+def saysorry(update,context):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :("
+    )
+
 # Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
-    entry_points=[MessageHandler(Filters.text(['Justificativa']), getTarget)],
+    entry_points=[MessageHandler(Filters.text(['Justificativa']), saysorry)],
+    # entry_points=[MessageHandler(Filters.text(['Justificativa']), getTarget)],
     states={
         TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getJustification)],
         TYPING_JUSTIFICATION: [MessageHandler(

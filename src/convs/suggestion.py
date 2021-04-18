@@ -52,9 +52,16 @@ def sendSuggestion(update, context):
     update.message.reply_text(text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :(", reply_markup = ReplyKeyboardRemove())
     return ConversationHandler.END
 
+def saysorry(update,context):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :("
+    )
+
+
 # Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
-    entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
+    entry_points=[MessageHandler(Filters.text(['Sugestão']), saysorry)],
+    # entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
     states={
         TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
         TYPING_SUGGESTION: [MessageHandler(

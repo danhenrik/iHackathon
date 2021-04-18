@@ -114,7 +114,7 @@ def setBirthday(update, context):
             }
             if(checkdb == 0):
                 birthdays.insert_one(newBirthday)
-                say(update, context, "Seu aniversário foi registrado!")
+                say(update, context, "Vou me lembrar! (É sério)")
             else:
                 birthdays.replace_one(
                     {"userID": update.message.from_user.id}, newBirthday)
