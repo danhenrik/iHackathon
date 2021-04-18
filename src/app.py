@@ -283,9 +283,20 @@ def end(update, context):
     return ConversationHandler.END
 
 
-def sched():
-    schedule.every().minute.do(checkReminder)
-    schedule.every().day.at("10:30").do(checkBirthday)
+def birthdayToday(update, context):
+    aniversariantes = checkBirthday()
+    print("Rodou")
+    print(update)
+    print(context)
+
+    if(aniversariantes):
+        response_message = ""
+        say(update, context, response_message)
+
+
+def sched(update, context):
+    schedule.every().second.do(checkReminder)
+    schedule.every().day.at("10:30").do(birthdayToday)
     while True:
         schedule.run_pending()
 
@@ -359,8 +370,8 @@ def bot():
 def main():
     scheduleProcess = multiprocessing.Process(target=sched)
     botProcess = multiprocessing.Process(target=bot)
-    scheduleProcess.start()
     botProcess.start()
+    scheduleProcess.start()
 
 
 if __name__ == "__main__":
