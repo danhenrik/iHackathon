@@ -334,7 +334,8 @@ def bot():
     starting_conv = ConversationHandler(
         entry_points=[
             CommandHandler('start', start),
-            MessageHandler(Filters.update, start)
+            MessageHandler(Filters.text & (
+                ~Filters.command), start)
         ],
         states={
             SELECTING_ACTION: selectionHandlers
