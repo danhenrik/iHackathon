@@ -1,7 +1,6 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler, CallbackQueryHandler, CallbackContext
 from env import TOKEN
-import time
 from scheduledEvents import checkBirthday, checkReminder
 import multiprocessing
 from db import reminders, birthdays, faq
@@ -12,11 +11,10 @@ import schedule
     SELECTING_ACTION,
     SELECTING_THEME,
     SELECTING_QUESTION,
-    STOPPING,
-    END,
     TYPING_TARGET,
     TYPING_SUGGESTION,
-    TYPING_SEGFAULT) = map(chr, range(8))
+    TYPING_SEGFAULT,
+    RESTART) = map(chr, range(7))
 
 
 def say(update, context, message):
@@ -29,25 +27,6 @@ def Lembrete(update, context):
     response_message = "Só me fala o dia e a hora"
 
     # TODO: Salvar o lembrete no banco
-    say(update, context, response_message)
-
-
-def Sugestao(update, context):
-    response_message = "Qualquer coisa"
-
-    # TODO: Pergunta qual a sugestão, depois pra quem e por fim manda a sugestão
-    say(update, context, response_message)
-
-
-def unknown(update, context):
-    response_message = "Como é que é?"
-    say(update, context, response_message)
-
-
-def DenunciaAnonima(update, context):
-    response_message = "Manda a braba"
-
-    # TODO: Pega a proxima mensagem que te mandarem e manda ela pro RH
     say(update, context, response_message)
 
 
@@ -71,13 +50,6 @@ def validateDate(context):
         return False
 
 
-def sched():
-    schedule.every().minute.do(checkReminder)
-    schedule.every().day.at("10:30").do(checkBirthday)
-    while True:
-        schedule.run_pending()
-
-
 def checkPrivate(update):
     return update.message.chat.type == "private"
 
@@ -95,8 +67,6 @@ def setBirthday(update, context):
             year = birthday[2]
             name = str(update.message.from_user.first_name)
             if update.message.from_user.last_name:
-                print(update.message.from_user.first_name)
-                print(update.message.from_user.last_name)
                 name = name + " " + update.message.from_user.last_name
             newBirthday = {
                 "userID": update.message.from_user.id,
@@ -174,41 +144,29 @@ def getBirthdays(update, context):
             prevmonth == j["month"]
             print(j)
             response_message += str(j["day"]) + " - " + j["userName"] + "\n"
-
         say(update, context, response_message)
-
-
-def copia(update, context):
-    response_message = update.message.text
-    print("update> ", update, "\n\n")
-    print(update.message.from_user.id)
-    print(update.message.text)
-
-    newReminder = {
-        "author_id": update.message.from_user.id,
-        "author_name": update.message.from_user.first_name,
-        "text": update.message.text,
-    }
-    # birthdays.insert_one(newReminder)
-
-    say(update, context, response_message+"!")
 
 
 # Funções teste conversa
 def start(update, context):
     if update.message.chat.type != 'private':
-        text = 'Desculpe, mas só podemos ter uma conversa no privado! ^^'
+        text = 'Desculpe, mas só podemos ter uma conversa no privado! ^-^'
         update.message.reply_text(text=text)
-        return None
+        return ConversationHandler.END
 
     reply_keyboard = [
         ['FAQ', 'Sugestão', 'Segfault'],
         ['Xapralá']
     ]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    text = ('Olá! Eu sou o iSpirito.\n'
-            'Sou seu assistente pessoal da iJunior!\n'
-            'Com o que posso ajudar?')
+
+    if not context.user_data.get(RESTART):
+        intro = ('Olá!\nEu sou o iSpirito.\n'
+                 'Sou seu assistente pessoal da iJunior!')
+        update.message.reply_text(text=intro)
+
+    context.user_data[RESTART] = False
+    text = 'Com o que posso ajudar?'
     update.message.reply_text(text=text, reply_markup=markup)
 
     return SELECTING_ACTION
@@ -227,20 +185,8 @@ def selectTheme(update, context):
     return SELECTING_THEME
 
 
-def sendCongrats(birthdays):
-    do = "do"
-    print(birthdays)
-
-    # response_message =
-    # say(update, context, response_message)
-
-
 def selectQuestion(update, context):
     tema = update.message.text
-
-    if tema == 'Cancelar':
-        start(update, context)
-        return None
 
     reply_keyboard = []
 
@@ -258,9 +204,6 @@ def selectQuestion(update, context):
 
 def showAnswer(update, context):
     enunciado = update.message.text
-    if enunciado == 'Cancelar':
-        start(update, context)
-        return None
 
     pergunta = faq.find_one({"enunciado": enunciado})
 
@@ -278,12 +221,15 @@ def getTarget(update, context):
     return TYPING_TARGET
 
 
-def getSuggestion(update, context):
-    alvo = update.message.text
-    if alvo == 'Cancelar':
-        start(update, context)
-        return None
+def getHelp(update, context):
+    if(update.message.chat.type == "group"):
+        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
+    else:
+        response_message = "Commands:\n\n/birthdaylist"
+    say(update, context, response_message)
 
+
+def getSuggestion(update, context):
     text = ('Perfeito!\n'
             'E qual será a sua sugestão?')
     reply_keyboard = [['Cancelar']]
@@ -291,14 +237,6 @@ def getSuggestion(update, context):
     update.message.reply_text(text=text, reply_markup=markup)
 
     return TYPING_SUGGESTION
-
-
-def getHelp(update, context):
-    if(checkPrivate(update)):
-        response_message = "Commands:\n/mybirthday\n/birthdaylist\n/FAQ"
-    else:
-        response_message = "Commands:\n\n/birthdaylist"
-    say(update, context, response_message)
 
 
 def sendSuggestion(update, context):
@@ -317,7 +255,10 @@ def getSegfault(update, context):
     text = ('Que pena que você tenha uma reclamação\n'
             'Mas que bom que você está nos contando!\n'
             'Qual é o problema? Não se preocupe, essa denúncia é anônima')
-    update.message.reply_text(text=text)
+
+    reply_keyboard = [['Cancelar']]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    update.message.reply_text(text=text, reply_markup=markup)
 
     return TYPING_SEGFAULT
 
@@ -331,6 +272,24 @@ def sendSegfault(update, context):
     update.message.reply_text(text=text)
 
 
+def restart(update, context):
+    context.user_data[RESTART] = True
+    start(update, context)
+    return ConversationHandler.END
+
+
+def end(update, context):
+    say(update, context, 'Tudo bem! Até a próxima! Qualquer coisa é só chamar! ^-^')
+    return ConversationHandler.END
+
+
+def sched():
+    schedule.every().minute.do(checkReminder)
+    schedule.every().day.at("10:30").do(checkBirthday)
+    while True:
+        schedule.run_pending()
+
+
 def bot():
     updater = Updater(token=TOKEN)
 
@@ -340,40 +299,45 @@ def bot():
         entry_points=[MessageHandler(Filters.regex('FAQ'), selectTheme)],
         states={
             SELECTING_THEME: [MessageHandler(Filters.text(['Diretorias', 'Tecnologias', 'Outros']), selectQuestion)],
-            SELECTING_QUESTION: [MessageHandler(Filters.text, showAnswer)]
+            SELECTING_QUESTION: [MessageHandler(
+                ~Filters.text(['Cancelar']) & Filters.text, showAnswer)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     sugestao_conv = ConversationHandler(
         entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
         states={
-            TYPING_TARGET: [MessageHandler(Filters.text, getSuggestion)],
+            TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
             TYPING_SUGGESTION: [MessageHandler(
-                Filters.text, sendSuggestion)]
+                ~Filters.text(['Cancelar']) & Filters.text, sendSuggestion)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     segfault_conv = ConversationHandler(
         entry_points=[MessageHandler(Filters.text('Segfault'), getSegfault)],
         states={
-            TYPING_SEGFAULT: [MessageHandler(Filters.text, sendSegfault)]
+            TYPING_SEGFAULT: [MessageHandler(~Filters.text(
+                ['Cancelar']) & Filters.text, sendSegfault)]
         },
-        fallbacks=[]
+        fallbacks=[MessageHandler(Filters.text(['Cancelar']), restart)]
     )
 
     selectionHandlers = [
         faq_conv,
         sugestao_conv,
-        segfault_conv
+        segfault_conv,
+        MessageHandler(Filters.text(['Xapralá']), end)
     ]
 
     starting_conv = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[
+            CommandHandler('start', start),
+            MessageHandler(Filters.update, start)
+        ],
         states={
-            SELECTING_ACTION: selectionHandlers,
-            STOPPING: [CommandHandler('start', start)]
+            SELECTING_ACTION: selectionHandlers
         },
         fallbacks=[]
     )
@@ -383,14 +347,9 @@ def bot():
     dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
     dispatcher.add_handler(CommandHandler("birthdaylist", getBirthdays))
     dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
-    dispatcher.add_handler(CommandHandler("sugestao", Sugestao))
-    dispatcher.add_handler(CommandHandler("181", DenunciaAnonima))
     dispatcher.add_handler(CommandHandler("help", getHelp))
     dispatcher.add_handler(CommandHandler("teste", teste))
     # Quando chegar uma menssagem e ela n for um comando da trigger na função segundo parâmetro
-    dispatcher.add_handler(MessageHandler(
-        Filters.text & (~Filters.command), copia))
-    dispatcher.add_handler(MessageHandler(Filters.command, unknown))
 
     updater.start_polling()
     updater.idle()
