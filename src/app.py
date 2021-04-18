@@ -155,9 +155,9 @@ def getHelp(update, context):
         " seu aniversário\n/birthdaylist Lista os aniversários registrados\n No privado tenho algumas funcionalidades" + \
         " extras como:\n - Enviar email de justificativa pro RH\n - FAQ, com perguntas frequentes sobre diversos temas" + \
         " pertinentes à empresa\n - Segfault, por meio do bot é possível fazer reclamações 100% anônimas pro RH" + \
-        " (espero que ninguem precise usar esse recurso)\n - Suegestões, onde vc pode fazer a sugestão de ideias" + \
+        " (espero que ninguem precise usar esse recurso)\n - Sugestões, onde vc pode fazer a sugestão de ideias" + \
         " à empresa, podendo ser direcionado ou com o escopo geral\nPra usar essas funcionalidades basta me chamar" + \
-        " no privado com um /start\n Espero ser útil! 👻"
+        " no privado!\n Espero ser útil! 👻"
     say(update, context, response_message)
 
 
