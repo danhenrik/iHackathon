@@ -3,11 +3,15 @@ from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, Conve
 from mail import send_mail
 from actions import restart
 
+""" Módulo da conversa de Justificativa """
+
+# Declaração de constantes de estado usadas pela conversa
 (
     TYPING_TARGET,
     TARGET,
     TYPING_JUSTIFICATION) = map(chr, range(3))
 
+# Função que introduz a conversa de justificativa e atualiza o estado para esperar a entrada de alvo da justificativa
 def getTarget(update, context):
     text = ('Certo. Precisa justificar alguma falta.\n'
             'Exatamente que situação você está justificando?')
@@ -17,6 +21,7 @@ def getTarget(update, context):
 
     return TYPING_TARGET
 
+# Função que recebe o alvo da justificativa no update e atualiza o estado para receber a justificativa
 def getJustification(update, context):
     target = update.message.text
     context.user_data[TARGET] = target
@@ -28,7 +33,7 @@ def getJustification(update, context):
 
     return TYPING_JUSTIFICATION
 
-
+# Função que recebe a justificativa e a envia por email, encerrando a conversa
 def sendJustification(update, context):
 
     justification = (f'Quem está justificando: {update.message.from_user.first_name}\n'
@@ -45,6 +50,7 @@ def sendJustification(update, context):
 
     return ConversationHandler.END
 
+# Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
     entry_points=[MessageHandler(Filters.text(['Justificativa']), getTarget)],
     states={

@@ -3,11 +3,15 @@ from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, Conve
 from mail import send_mail
 from actions import restart
 
+""" Módulo da conversa de Sugestão """
+
+# Declaração de constantes de estado usadas pela conversa
 (
     TYPING_TARGET,
     TARGET,
     TYPING_SUGGESTION) = map(chr, range(3))
 
+# Função que introduz a conversa de Sugestão e atualiza o estado para receber o alvo da sugestão
 def getTarget(update, context):
     text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
             'Qual será o alvo da sua sugestão?')
@@ -17,6 +21,7 @@ def getTarget(update, context):
 
     return TYPING_TARGET
 
+# Função que recebe o alvo no update e atualiza o estado para receber a sugestão
 def getSuggestion(update, context):
     target = update.message.text
     context.user_data[TARGET] = target
@@ -28,7 +33,7 @@ def getSuggestion(update, context):
 
     return TYPING_SUGGESTION
 
-
+# Função que recebe a sugestão no update e a envia por email, encerrando a conversa
 def sendSuggestion(update, context):
 
     suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
@@ -44,6 +49,7 @@ def sendSuggestion(update, context):
 
     return ConversationHandler.END
 
+# Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
     entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
     states={
