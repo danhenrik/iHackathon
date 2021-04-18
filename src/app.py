@@ -231,6 +231,7 @@ def getSuggestionTarget(update, context):
 
     return TYPING_TARGET
 
+
 def getSuggestion(update, context):
     target = update.message.text
     context.user_data[TARGET] = target
@@ -252,8 +253,9 @@ def sendSuggestion(update, context):
 
     update.message.reply_text(
         text='Sua sugestão será enviada diretamente para nosso email!')
-    update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
-    
+    update.message.reply_text(text='Muito obrigado!',
+                              reply_markup=ReplyKeyboardRemove())
+
     del context.user_data[TARGET]
 
     return ConversationHandler.END
@@ -267,6 +269,7 @@ def getJustificationTarget(update, context):
     update.message.reply_text(text=text, reply_markup=markup)
 
     return TYPING_TARGET
+
 
 def getJustification(update, context):
     target = update.message.text
@@ -283,15 +286,16 @@ def getJustification(update, context):
 def sendJustification(update, context):
 
     justification = (f'Quem está justificando: {update.from_user.first_name}\n'
-        f'O que está justificando: {context.user_data.get(TARGET)}\n'
-        f'Justificativa: {update.message.text}')
+                     f'O que está justificando: {context.user_data.get(TARGET)}\n'
+                     f'Justificativa: {update.message.text}')
 
     send_mail('Justificativa', justification)
 
     update.message.reply_text(
         text='Sua justificativa será enviada diretamente para nosso email!')
-    update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
-    
+    update.message.reply_text(text='Muito obrigado!',
+                              reply_markup=ReplyKeyboardRemove())
+
     del context.user_data[TARGET]
 
     return ConversationHandler.END
@@ -315,7 +319,7 @@ def sendSegfault(update, context):
     text = ('Muito obrigado pela sua submissão!\n'
             'Sua reclamação já foi enviada para o nosso email!')
 
-    update.message.reply_text(text=text, reply_markup = ReplyKeyboardRemove())
+    update.message.reply_text(text=text, reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 
@@ -342,11 +346,22 @@ def birthdayToday(update, context):
         say(update, context, response_message)
 
 
+def sendTeste(update, context):
+    say(update, context, "Foi")
+
+
 def sched(update, context):
     schedule.every().second.do(checkReminder)
-    schedule.every().day.at("10:30").do(birthdayToday)
+    schedule.every().second.do(sendTeste, update, context)
+    schedule.every().day.at("11:30").do(birthdayToday)
     while True:
         schedule.run_pending()
+
+
+def init(update, context):
+    scheduleProcess = multiprocessing.Process(
+        target=sched, args=[update, context])
+    scheduleProcess.start()
 
 
 def bot():
@@ -365,7 +380,8 @@ def bot():
     )
 
     sugestao_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text(['Sugestão']), getSuggestionTarget)],
+        entry_points=[MessageHandler(Filters.text(
+            ['Sugestão']), getSuggestionTarget)],
         states={
             TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
             TYPING_SUGGESTION: [MessageHandler(
@@ -375,7 +391,8 @@ def bot():
     )
 
     justification_conv = ConversationHandler(
-        entry_points=[MessageHandler(Filters.text(['Justificativa']), getJustificationTarget)],
+        entry_points=[MessageHandler(Filters.text(
+            ['Justificativa']), getJustificationTarget)],
         states={
             TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getJustification)],
             TYPING_JUSTIFICATION: [MessageHandler(
@@ -415,6 +432,7 @@ def bot():
 
     # Quando usar o comando com a palavra chave (primeiro parametro) da trigger na função (segundo parametro)
     dispatcher.add_handler(starting_conv)
+    dispatcher.add_handler(CommandHandler("init", init))
     dispatcher.add_handler(CommandHandler("mybirthday", setBirthday))
     dispatcher.add_handler(CommandHandler("birthdaylist", getBirthdays))
     dispatcher.add_handler(CommandHandler("lembrete", Lembrete))
@@ -427,10 +445,8 @@ def bot():
 
 
 def main():
-    scheduleProcess = multiprocessing.Process(target=sched)
     botProcess = multiprocessing.Process(target=bot)
     botProcess.start()
-    scheduleProcess.start()
 
 
 if __name__ == "__main__":
