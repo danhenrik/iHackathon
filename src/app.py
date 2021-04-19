@@ -2,7 +2,7 @@ import threading
 from typing import ContextManager
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler
-from env import TOKEN
+from env import TOKEN, TOKEN_D
 from scheduledEvents import checkBirthday
 import multiprocessing
 from db import reminders, birthdays
@@ -136,7 +136,7 @@ def setBirthday(update, context):
 
 # Lista todos os aniversariantes registrados a partir do comando "/birthdaylist"
 def getBirthdays(update, context):
-    if(checkPrivate(update)):
+    if(not checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
         response_message = "Aniversariantes:\n"
@@ -152,8 +152,11 @@ def getBirthdays(update, context):
         for j in niverArr:
             if(j["month"] != previousMonth):
                 response_message += newMonth(j["month"])+"\n"
-            previousMonth == j["month"]
-            response_message += str(j["day"]) + " - " + j["userName"] + "\n"
+            previousMonth = j["month"]
+            if(len(str(j["day"])) == 1):
+                response_message += "0" + str(j["day"]) + " - " + j["userName"] + "\n"
+            else:
+                response_message += str(j["day"]) + " - " + j["userName"] + "\n"
         say(update, context, response_message)
 
 
@@ -183,7 +186,7 @@ def init(update, context):
 
 # Inicializa o bot, incluindo todos seus comandos e interações possíveis.
 def bot():
-    updater = Updater(token=TOKEN)
+    updater = Updater(token=TOKEN_D)
 
     dispatcher = updater.dispatcher
 

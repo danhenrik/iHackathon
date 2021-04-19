@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 # A partir da lib python-dotenv carregamos as variáveis do .env para dentro da aplicação
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
+TOKEN_D = os.getenv("BOT_TOKEN_DEV")
 MONGO_DB_URL = os.getenv("MONGO_DB_URL")
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = os.getenv("SMTP_PORT")
