@@ -136,7 +136,7 @@ def setBirthday(update, context):
 
 # Lista todos os aniversariantes registrados a partir do comando "/birthdaylist"
 def getBirthdays(update, context):
-    if(not checkPrivate(update)):
+    if(checkPrivate(update)):
         say(update, context, "Essa funcionalidade é exclusiva para grupos")
     else:
         response_message = "Aniversariantes:\n"
@@ -186,7 +186,7 @@ def init(update, context):
 
 # Inicializa o bot, incluindo todos seus comandos e interações possíveis.
 def bot():
-    updater = Updater(token=TOKEN_D)
+    updater = Updater(token=TOKEN)
 
     dispatcher = updater.dispatcher
 
