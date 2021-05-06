@@ -34,7 +34,7 @@ def getSuggestion(update, context):
 # Função que recebe a sugestão no update e a envia por email, encerrando a conversa
 def sendSuggestion(update, context):
     suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
-                   f'Sugestão: {update.message.text}')
+                  f'Sugestão: {update.message.text}')
 
     send_mail('Sugestão', suggestion)
 

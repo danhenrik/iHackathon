@@ -44,7 +44,6 @@ def sendJustification(update, context):
     update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
     
     del context.user_data[TARGET]
-    update.message.reply_text(text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :(", reply_markup = ReplyKeyboardRemove())
     return ConversationHandler.END
 
 def saysorry(update,context):
