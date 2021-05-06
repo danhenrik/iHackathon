@@ -2,7 +2,7 @@ import threading
 from typing import ContextManager
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater, ConversationHandler
-from env import TOKEN
+from env import TOKEN, TOKEN_D
 from scheduledEvents import checkBirthday
 import multiprocessing
 from db import reminders, birthdays
@@ -11,6 +11,7 @@ from actions import say, start, restart, end
 from convs import faq, suggestion, justification, segfault
 import schedule
 import time
+import random
 
 """ Módulo principal, aqui é onde a mágica acontece """
 
@@ -114,11 +115,15 @@ def setBirthday(update, context):
             }
             if(checkdb == 0):
                 birthdays.insert_one(newBirthday)
-                say(update, context, "Seu aniversário foi registrado!")
+                msgs = ["Vou me lembrar! (É sério)","Anotei aqui!","Seu aniversário agora está registrado"]
+                index = random.randint(0,len(msgs)-1)
+                say(update, context, msgs[index])
             else:
                 birthdays.replace_one(
                     {"userID": update.message.from_user.id}, newBirthday)
-                say(update, context, "Seu aniversário foi atualizado!")
+                msgs = ["Atualizei aqui!","Seu aniversário foi atualizado!"]
+                index = random.randint(0,len(msgs)-1)
+                say(update, context, msgs[index])
 
         else:
             userExists = birthdays.find_one({"userID":update.message.from_user.id })
@@ -147,8 +152,11 @@ def getBirthdays(update, context):
         for j in niverArr:
             if(j["month"] != previousMonth):
                 response_message += newMonth(j["month"])+"\n"
-            previousMonth == j["month"]
-            response_message += str(j["day"]) + " - " + j["userName"] + "\n"
+            previousMonth = j["month"]
+            if(len(str(j["day"])) == 1):
+                response_message += "0" + str(j["day"]) + " - " + j["userName"] + "\n"
+            else:
+                response_message += str(j["day"]) + " - " + j["userName"] + "\n"
         say(update, context, response_message)
 
 

@@ -18,7 +18,6 @@ def getTarget(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-
     return TYPING_TARGET
 
 # Função que recebe o alvo no update e atualiza o estado para receber a sugestão
@@ -30,12 +29,10 @@ def getSuggestion(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-
     return TYPING_SUGGESTION
 
 # Função que recebe a sugestão no update e a envia por email, encerrando a conversa
 def sendSuggestion(update, context):
-
     suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
                   f'Sugestão: {update.message.text}')
 
@@ -46,12 +43,18 @@ def sendSuggestion(update, context):
     update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
     
     del context.user_data[TARGET]
-
     return ConversationHandler.END
+
+def saysorry(update,context):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :("
+    )
+
 
 # Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
-    entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
+    entry_points=[MessageHandler(Filters.text(['Sugestão']), saysorry)],
+    # entry_points=[MessageHandler(Filters.text(['Sugestão']), getTarget)],
     states={
         TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getSuggestion)],
         TYPING_SUGGESTION: [MessageHandler(

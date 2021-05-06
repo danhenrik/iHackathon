@@ -18,7 +18,6 @@ def getTarget(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-
     return TYPING_TARGET
 
 # Função que recebe o alvo da justificativa no update e atualiza o estado para receber a justificativa
@@ -30,12 +29,10 @@ def getJustification(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-
     return TYPING_JUSTIFICATION
 
 # Função que recebe a justificativa e a envia por email, encerrando a conversa
 def sendJustification(update, context):
-
     justification = (f'Quem está justificando: {update.message.from_user.first_name}\n'
         f'O que está justificando: {context.user_data.get(TARGET)}\n'
         f'Justificativa: {update.message.text}')
@@ -47,12 +44,17 @@ def sendJustification(update, context):
     update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
     
     del context.user_data[TARGET]
-
     return ConversationHandler.END
+
+def saysorry(update,context):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :("
+    )
 
 # Conversartion Handler: gerencia a o início, os estados e o fim da conversa
 conv_handler = ConversationHandler(
-    entry_points=[MessageHandler(Filters.text(['Justificativa']), getTarget)],
+    entry_points=[MessageHandler(Filters.text(['Justificativa']), saysorry)],
+    # entry_points=[MessageHandler(Filters.text(['Justificativa']), getTarget)],
     states={
         TYPING_TARGET: [MessageHandler(~Filters.text(['Cancelar']) & Filters.text, getJustification)],
         TYPING_JUSTIFICATION: [MessageHandler(
