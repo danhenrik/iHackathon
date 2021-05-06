@@ -13,18 +13,15 @@ from actions import restart
 
 # Função que introduz a conversa de Sugestão e atualiza o estado para receber o alvo da sugestão
 def getTarget(update, context):
-    """
     text = ('Que ótimo! Adorarei ouvir sua sugestão!\n'
             'Qual será o alvo da sua sugestão?')
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-    """
     return TYPING_TARGET
 
 # Função que recebe o alvo no update e atualiza o estado para receber a sugestão
 def getSuggestion(update, context):
-    """
     target = update.message.text
     context.user_data[TARGET] = target
     text = ('Perfeito!\n'
@@ -32,12 +29,10 @@ def getSuggestion(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-    """
     return TYPING_SUGGESTION
 
 # Função que recebe a sugestão no update e a envia por email, encerrando a conversa
 def sendSuggestion(update, context):
-    """
     suggestion = (f'Alvo da sugestão: {context.user_data.get(TARGET)}\n'
                    f'Sugestão: {update.message.text}')
 
@@ -45,11 +40,9 @@ def sendSuggestion(update, context):
 
     update.message.reply_text(
         text='Sua sugestão será enviada diretamente para nosso email!')
-     update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
+    update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
     
     del context.user_data[TARGET]
-    """
-    update.message.reply_text(text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :(", reply_markup = ReplyKeyboardRemove())
     return ConversationHandler.END
 
 def saysorry(update,context):

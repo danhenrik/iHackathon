@@ -13,18 +13,15 @@ from actions import restart
 
 # Função que introduz a conversa de justificativa e atualiza o estado para esperar a entrada de alvo da justificativa
 def getTarget(update, context):
-    """
     text = ('Certo. Precisa justificar alguma falta.\n'
             'Exatamente que situação você está justificando?')
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-    """
     return TYPING_TARGET
 
 # Função que recebe o alvo da justificativa no update e atualiza o estado para receber a justificativa
 def getJustification(update, context):
-    """
     target = update.message.text
     context.user_data[TARGET] = target
     text = ('Perfeito!\n'
@@ -32,12 +29,10 @@ def getJustification(update, context):
     reply_keyboard = [['Cancelar']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     update.message.reply_text(text=text, reply_markup=markup)
-    """
     return TYPING_JUSTIFICATION
 
 # Função que recebe a justificativa e a envia por email, encerrando a conversa
 def sendJustification(update, context):
-    """
     justification = (f'Quem está justificando: {update.message.from_user.first_name}\n'
         f'O que está justificando: {context.user_data.get(TARGET)}\n'
         f'Justificativa: {update.message.text}')
@@ -49,7 +44,6 @@ def sendJustification(update, context):
     update.message.reply_text(text='Muito obrigado!', reply_markup = ReplyKeyboardRemove())
     
     del context.user_data[TARGET]
-    """
     update.message.reply_text(text="Essa função infelizmente ainda não está funcionando, estamos no aguardo do email oficial do iSpirito para tal. :(", reply_markup = ReplyKeyboardRemove())
     return ConversationHandler.END
 
